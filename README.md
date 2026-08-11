@@ -52,7 +52,7 @@ Each image has a `metadata.yaml`:
 
 ```yaml
 name: python
-version: "3.13"
+version: "3.14"
 description: Python runtime based on Debian Bookworm slim.
 dockerfile: Dockerfile
 architectures:
