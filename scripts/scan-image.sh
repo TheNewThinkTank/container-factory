@@ -32,11 +32,24 @@ echo "Failing on CVSS >= ${MAX_CVSS}"
 
 grype "container-factory/${IMAGE}:${TAG}" -o table
 
-# Capture grype JSON output
-GRYPE_OUTPUT=$(grype "container-factory/${IMAGE}:${TAG}" -o json)
+# Capture grype JSON output to a temp file
+GRYPE_JSON=$(mktemp)
+if ! grype "container-factory/${IMAGE}:${TAG}" -o json > "$GRYPE_JSON" 2>&1; then
+  echo "Error: grype scan failed" >&2
+  cat "$GRYPE_JSON" >&2
+  rm -f "$GRYPE_JSON"
+  exit 1
+fi
+
+if [[ ! -s "$GRYPE_JSON" ]]; then
+  echo "Error: grype produced no output" >&2
+  cat "$GRYPE_JSON" >&2
+  rm -f "$GRYPE_JSON"
+  exit 1
+fi
 
 # Parse with Python
-echo "${GRYPE_OUTPUT}" | python3 - "${MAX_CVSS}" <<'PY'
+cat "$GRYPE_JSON" | python3 - "${MAX_CVSS}" <<'PY'
 import json
 import sys
 
@@ -67,3 +80,6 @@ if violations:
 
 print("\nSecurity policy PASSED.")
 PY
+
+# Clean up temp file
+rm -f "$GRYPE_JSON"
