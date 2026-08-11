@@ -50,7 +50,7 @@ for match in report.get("matches", []):
         default=None,
     )
 
-    if severity == "critical" or (score is not None and float(score) >= max_cvss):
+    if severity in ("critical", "unknown") or (score is not None and float(score) >= max_cvss):
         violations.append(
             f"{vuln.get('id', 'unknown')}: severity={severity}, cvss={score}"
         )
