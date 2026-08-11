@@ -75,7 +75,7 @@ jobs:
             -o cyclonedx-json="sbom/${{ matrix.image }}.cdx.json"
 
       - name: Install Grype
-        uses: anchore/scan-action/download-grype@v7
+        uses: anchore/grype-action@v0
 
       - name: Scan image
         env:
