@@ -1,6 +1,6 @@
 name: python
 version: "3.14.0"
-description: Python 3.14 runtime based on Debian Bookworm slim.
+description: Python 3.14 runtime based on Debian Trixie slim.
 dockerfile: Dockerfile
 architectures:
   - linux/amd64
