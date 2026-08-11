@@ -12,6 +12,9 @@ IMAGE_ROOT = ROOT / "images"
 NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
 VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$")
 
+# Sections that should be lists
+LIST_SECTIONS = {"architectures", "registry"}
+
 
 def parse_metadata(path: Path) -> dict:
     data: dict = {}
@@ -44,15 +47,11 @@ def parse_metadata(path: Path) -> dict:
         elif not value:
             # An empty top-level value starts either a list or a mapping.
             section = key
-            data[key] = {}
+            # Initialize as list if this is a known list section, otherwise as dict
+            data[key] = [] if key in LIST_SECTIONS else {}
         else:
             section = None
             data[key] = value.strip('"').strip("'")
-
-    # Convert known list sections from the parser's mapping placeholder.
-    for key in ("architectures", "registry"):
-        if data.get(key) == {}:
-            data[key] = []
 
     return data
 
