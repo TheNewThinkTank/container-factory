@@ -1,0 +1,7 @@
+.git
+.github
+.config
+sbom
+README.md
+Makefile
+compose.yaml

@@ -1,0 +1,120 @@
+name: Release container images
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "images/**"
+      - ".config/security-policy.yaml"
+      - "scripts/**"
+      - ".github/workflows/release.yml"
+  workflow_dispatch:
+    inputs:
+      image:
+        description: Image to release, or "all"
+        required: true
+        default: all
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  release:
+    name: Build, scan and publish
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - hello
+          - python
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Filter manual dispatch
+        if: github.event_name == 'workflow_dispatch' && inputs.image != 'all' && inputs.image != matrix.image
+        run: |
+          echo "Skipping ${{ matrix.image }}"
+          exit 0
+
+      - name: Read metadata
+        id: metadata
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("images/${{ matrix.image }}/metadata.yaml")
+          text = path.read_text()
+
+          def get(key):
+              match = re.search(rf"^{key}:\\s*[\"']?([^\"'\\n]+)[\"']?\\s*$", text, re.M)
+              if not match:
+                  raise SystemExit(f"Missing {key} in {path}")
+              return match.group(1).strip()
+
+          print(f"name={get('name')}")
+          print(f"version={get('version')}")
+          PY
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build image for security checks
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --tag "container-factory/${{ matrix.image }}:release" \
+            --load \
+            "images/${{ matrix.image }}"
+
+      - name: Install Syft
+        uses: anchore/sbom-action/download-syft@v0
+
+      - name: Generate SBOM
+        run: |
+          mkdir -p sbom
+          syft "container-factory/${{ matrix.image }}:release" \
+            -o cyclonedx-json="sbom/${{ matrix.image }}.cdx.json"
+
+      - name: Install Grype
+        uses: anchore/scan-action/download-grype@v6
+
+      - name: Security gate
+        env:
+          IMAGE: ${{ matrix.image }}
+          TAG: release
+        run: scripts/scan-image.sh
+
+      - name: Build and push multi-arch image
+        env:
+          IMAGE_NAME: ${{ steps.metadata.outputs.name }}
+          VERSION: ${{ steps.metadata.outputs.version }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          IMAGE="ghcr.io/${OWNER,,}/${IMAGE_NAME}"
+
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --tag "${IMAGE}:${VERSION}" \
+            --tag "${IMAGE}:latest" \
+            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --push \
+            "images/${{ matrix.image }}"
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.image }}-${{ github.sha }}
+          path: sbom/

@@ -1,0 +1,11 @@
+name: hello
+version: "1.0.0"
+description: Tiny smoke-test image for validating the factory pipeline.
+dockerfile: Dockerfile
+architectures:
+  - linux/amd64
+  - linux/arm64
+registry:
+  - ghcr
+scan:
+  max_cvss: 7.0

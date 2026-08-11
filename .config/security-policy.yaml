@@ -1,0 +1,14 @@
+# Global security policy for container-factory.
+#
+# A release is rejected when:
+#   * a vulnerability has CVSS >= max_cvss
+#   * a vulnerability has one of the fail_on_severity values
+#
+# The policy can be overridden per image in metadata.yaml.
+
+max_cvss: 7.0
+
+fail_on_severity:
+  - critical
+
+ignore: []

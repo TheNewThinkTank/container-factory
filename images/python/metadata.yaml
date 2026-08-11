@@ -1,0 +1,11 @@
+name: python
+version: "3.13.0"
+description: Python 3.13 runtime based on Debian Bookworm slim.
+dockerfile: Dockerfile
+architectures:
+  - linux/amd64
+  - linux/arm64
+registry:
+  - ghcr
+scan:
+  max_cvss: 7.0

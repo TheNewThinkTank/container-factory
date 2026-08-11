@@ -1,0 +1,5 @@
+services:
+  hello:
+    build:
+      context: ./images/hello
+    image: container-factory/hello:compose
