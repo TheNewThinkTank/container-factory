@@ -1,4 +1,4 @@
-FROM alpine:3.22
+FROM alpine:3.24
 
 LABEL org.opencontainers.image.title="container-factory hello" \
       org.opencontainers.image.description="Tiny smoke-test image for container-factory" \
