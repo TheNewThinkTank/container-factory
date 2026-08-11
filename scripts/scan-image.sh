@@ -48,13 +48,16 @@ if [[ ! -s "$GRYPE_JSON" ]]; then
   exit 1
 fi
 
-# Parse with Python
-cat "$GRYPE_JSON" | python3 - "${MAX_CVSS}" <<'PY'
+# Parse with Python, passing the file path as an argument
+python3 - "${GRYPE_JSON}" "${MAX_CVSS}" <<'PY'
 import json
 import sys
 
-max_cvss = float(sys.argv[1])
-report = json.load(sys.stdin)
+grype_json_file = sys.argv[1]
+max_cvss = float(sys.argv[2])
+
+with open(grype_json_file) as f:
+    report = json.load(f)
 
 violations = []
 for match in report.get("matches", []):
