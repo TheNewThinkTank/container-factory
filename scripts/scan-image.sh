@@ -32,7 +32,11 @@ echo "Failing on CVSS >= ${MAX_CVSS}"
 
 grype "container-factory/${IMAGE}:${TAG}" -o table
 
-grype "container-factory/${IMAGE}:${TAG}" -o json | python3 - "${MAX_CVSS}" <<'PY'
+# Capture grype JSON output
+GRYPE_OUTPUT=$(grype "container-factory/${IMAGE}:${TAG}" -o json)
+
+# Parse with Python
+echo "${GRYPE_OUTPUT}" | python3 - "${MAX_CVSS}" <<'PY'
 import json
 import sys
 
