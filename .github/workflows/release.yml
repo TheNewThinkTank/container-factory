@@ -32,7 +32,7 @@ jobs:
           - python
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Filter manual dispatch
         if: github.event_name == 'workflow_dispatch' && inputs.image != 'all' && inputs.image != matrix.image
