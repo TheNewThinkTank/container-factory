@@ -7,6 +7,8 @@ on:
     paths:
       - "images/**"
       - ".config/security-policy.yaml"
+      - "requirements-dev.txt"
+      - "src/**"
       - "scripts/**"
       - ".github/workflows/release.yml"
   workflow_dispatch:
@@ -51,7 +53,7 @@ jobs:
           text = path.read_text()
 
           def get(key):
-              match = re.search(rf"^{key}:\\s*[\"']?([^\"'\\n]+)[\"']?\\s*$", text, re.M)
+              match = re.search(rf"^{key}:\s*["']?([^"'\n]+)["']?\s*$", text, re.M)
               if not match:
                   raise SystemExit(f"Missing {key} in {path}")
               return match.group(1).strip()
@@ -63,6 +65,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+      - name: Set up security-policy Python
+        run: |
+          python3 -m venv .venv-security
+          .venv-security/bin/pip install -r requirements-dev.txt
+
       - name: Log in to GHCR
         uses: docker/login-action@v4
         with:
@@ -72,11 +79,7 @@ jobs:
 
       - name: Build image for security checks
         run: |
-          docker buildx build \
-            --platform linux/amd64 \
-            --tag "container-factory/${{ matrix.image }}:release" \
-            --load \
-            "images/${{ matrix.image }}"
+          docker buildx build             --platform linux/amd64             --tag "container-factory/${{ matrix.image }}:release"             --load             "images/${{ matrix.image }}"
 
       - name: Install Syft
         uses: anchore/sbom-action/download-syft@v0
@@ -84,17 +87,15 @@ jobs:
       - name: Generate SBOM
         run: |
           mkdir -p sbom
-          syft "container-factory/${{ matrix.image }}:release" \
-            -o cyclonedx-json="sbom/${{ matrix.image }}.cdx.json"
+          syft "container-factory/${{ matrix.image }}:release"             -o cyclonedx-json="sbom/${{ matrix.image }}.cdx.json"
 
       - name: Install Grype
         uses: anchore/scan-action/download-grype@v7
 
       - name: Security gate
         env:
-          IMAGE: ${{ matrix.image }}
-          TAG: release
-        run: scripts/scan-image.sh
+          SECURITY_PYTHON: .venv-security/bin/python
+        run: scripts/scan-image.sh "${{ matrix.image }}" release
 
       - name: Build and push multi-arch image
         env:
@@ -104,17 +105,13 @@ jobs:
         run: |
           IMAGE="ghcr.io/${OWNER,,}/${IMAGE_NAME}"
 
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --tag "${IMAGE}:${VERSION}" \
-            --tag "${IMAGE}:latest" \
-            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
-            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
-            --push \
-            "images/${{ matrix.image }}"
+          docker buildx build             --platform linux/amd64,linux/arm64             --tag "${IMAGE}:${VERSION}"             --tag "${IMAGE}:latest"             --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}"             --label "org.opencontainers.image.revision=${GITHUB_SHA}"             --push             "images/${{ matrix.image }}"
 
-      - name: Upload SBOM
+      - name: Upload security reports
+        if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: sbom-${{ matrix.image }}-${{ github.sha }}
-          path: sbom/
+          name: security-${{ matrix.image }}-${{ github.sha }}
+          path: |
+            sbom/
+            reports/

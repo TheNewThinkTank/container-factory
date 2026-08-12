@@ -7,5 +7,3 @@ architectures:
   - linux/arm64
 registry:
   - ghcr
-scan:
-  max_cvss: 7.0

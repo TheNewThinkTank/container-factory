@@ -5,3 +5,6 @@ __pycache__/
 sbom/
 dist/
 build/
+
+.venv-security/
+reports/

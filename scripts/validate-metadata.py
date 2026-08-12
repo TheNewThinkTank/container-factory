@@ -68,7 +68,7 @@ def main() -> int:
             errors.append(str(exc))
             continue
 
-        required = {"name", "version", "description", "dockerfile", "architectures", "registry", "scan"}
+        required = {"name", "version", "description", "dockerfile", "architectures", "registry"}
         missing = required - data.keys()
         if missing:
             errors.append(f"{metadata}: missing keys: {', '.join(sorted(missing))}")
@@ -96,13 +96,6 @@ def main() -> int:
         elif any(r not in {"ghcr", "dockerhub"} for r in registries):
             errors.append(f"{metadata}: unsupported registry: {registries}")
 
-        scan = data["scan"]
-        try:
-            max_cvss = float(scan["max_cvss"])
-            if not 0 <= max_cvss <= 10:
-                raise ValueError
-        except (KeyError, TypeError, ValueError):
-            errors.append(f"{metadata}: scan.max_cvss must be a number between 0 and 10")
 
     if errors:
         print("Metadata validation failed:")

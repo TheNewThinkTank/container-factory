@@ -3,17 +3,23 @@ SHELL := /bin/bash
 IMAGE ?= hello
 TAG ?= local
 PLATFORMS ?= linux/amd64
+SECURITY_PYTHON ?= .venv-security/bin/python
 
-.PHONY: help validate build sbom scan security clean
+.PHONY: help setup validate build sbom scan security clean
 
 help:
 	@echo "Targets:"
+	@echo "  setup     Create security-policy Python environment"
 	@echo "  validate  Validate image metadata"
 	@echo "  build     Build IMAGE=$(IMAGE)"
 	@echo "  sbom      Generate SBOM for IMAGE=$(IMAGE)"
 	@echo "  scan      Scan IMAGE=$(IMAGE)"
 	@echo "  security  Build + SBOM + scan"
-	@echo "  clean     Remove generated SBOM files"
+	@echo "  test      Run security-policy unit tests"
+	@echo "  clean     Remove generated SBOM/report files"
+
+setup:
+	scripts/setup-security-tools.sh
 
 validate:
 	python3 scripts/validate-metadata.py
@@ -25,9 +31,12 @@ sbom: build
 	IMAGE=$(IMAGE) TAG=$(TAG) scripts/generate-sbom.sh
 
 scan: build
-	IMAGE=$(IMAGE) TAG=$(TAG) scripts/scan-image.sh
+	SECURITY_PYTHON=$(SECURITY_PYTHON) scripts/scan-image.sh $(IMAGE) $(TAG)
 
 security: sbom scan
 
+test:
+	PYTHONPATH=src $(SECURITY_PYTHON) -m unittest discover -s tests -v
+
 clean:
-	rm -rf sbom
+	rm -rf sbom reports

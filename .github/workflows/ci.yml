@@ -20,6 +20,18 @@ jobs:
       - name: Validate metadata
         run: python3 scripts/validate-metadata.py
 
+      - name: Validate security policy
+        run: |
+          python3 -m venv .venv-security
+          .venv-security/bin/pip install -r requirements-dev.txt
+          PYTHONPATH=src .venv-security/bin/python -c             "from container_factory.security.policy import load_policy; load_policy(__import__('pathlib').Path('.config/security-policy.yaml')); print('Security policy is valid.')"
+
+      - name: Unit tests
+        run: |
+          python3 -m venv .venv-security
+          .venv-security/bin/pip install -r requirements-dev.txt
+          PYTHONPATH=src .venv-security/bin/python -m unittest discover -s tests -v
+
   build-and-scan:
     name: Build and scan images
     needs: validate
@@ -37,33 +49,14 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Read image policy
-        id: metadata
+      - name: Set up security-policy Python
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          path = Path("images/${{ matrix.image }}/metadata.yaml")
-          text = path.read_text()
-
-          match = re.search(r"(?ms)^scan:\s*\n\s+max_cvss:\s*[\"']?([^\"'\n]+)", text)
-          if not match:
-              raise SystemExit(f"Missing scan.max_cvss in {path}")
-
-          print(f"max_cvss={match.group(1).strip()}")
-          # GitHub Actions output
-          with open(__import__("os").environ["GITHUB_OUTPUT"], "a") as output:
-              output.write(f"max_cvss={match.group(1).strip()}\n")
-          PY
+          python3 -m venv .venv-security
+          .venv-security/bin/pip install -r requirements-dev.txt
 
       - name: Build image
         run: |
-          docker buildx build \
-            --platform linux/amd64 \
-            --tag "container-factory/${{ matrix.image }}:ci" \
-            --load \
-            "images/${{ matrix.image }}"
+          docker buildx build             --platform linux/amd64             --tag "container-factory/${{ matrix.image }}:ci"             --load             "images/${{ matrix.image }}"
 
       - name: Install Syft
         uses: anchore/sbom-action/download-syft@v0
@@ -71,22 +64,21 @@ jobs:
       - name: Generate SBOM
         run: |
           mkdir -p sbom
-          syft "container-factory/${{ matrix.image }}:ci" \
-            -o cyclonedx-json="sbom/${{ matrix.image }}.cdx.json"
+          syft "container-factory/${{ matrix.image }}:ci"             -o cyclonedx-json="sbom/${{ matrix.image }}.cdx.json"
 
       - name: Install Grype
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+        uses: anchore/scan-action/download-grype@v7
 
       - name: Scan image
         env:
-          IMAGE: ${{ matrix.image }}
-          TAG: ci
-          MAX_CVSS: ${{ steps.metadata.outputs.max_cvss }}
-        run: scripts/scan-image.sh
+          SECURITY_PYTHON: .venv-security/bin/python
+        run: scripts/scan-image.sh "${{ matrix.image }}" ci
 
-      - name: Upload SBOM
+      - name: Upload security reports
+        if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: sbom-${{ matrix.image }}
-          path: sbom/
+          name: security-${{ matrix.image }}-${{ github.sha }}
+          path: |
+            sbom/
+            reports/

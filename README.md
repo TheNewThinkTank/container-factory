@@ -29,8 +29,17 @@ container-factory/
 ├── scripts/
 │   ├── build-image.sh
 │   ├── scan-image.sh
+│   ├── security-policy.sh
+│   ├── setup-security-tools.sh
 │   ├── generate-sbom.sh
 │   └── validate-metadata.py
+├── src/
+│   └── container_factory/
+│       └── security/
+│           └── policy.py
+├── tests/
+│   └── test_security_policy.py
+├── requirements-dev.txt
 ├── .github/
 │   ├── workflows/
 │   │   ├── ci.yml
@@ -68,32 +77,54 @@ The metadata is deliberately simple in v1. The CI workflow discovers changed ima
 
 ## Security policy
 
+The security policy is global and lives in `.config/security-policy.yaml`.
+
+Grype is used to discover vulnerabilities; the factory's Python policy engine
+decides whether they block publication.
+
 The default policy is:
 
 ```yaml
-max_cvss: 7.0
-fail_on_severity:
-  - critical
+security:
+  fail_severity:
+    - critical
+    - high
+  high_cvss_threshold: 7.0
+  no_fix_action: review
+  ignore_severity:
+    - medium
+    - low
+    - negligible
+    - unknown
+  exceptions: []
 ```
 
-The release workflow:
+This means:
 
-1. Builds the image locally with Buildx.
-2. Generates an SBOM.
-3. Scans the image with Grype.
-4. Fails if a vulnerability has a CVSS score above the configured threshold.
-5. Fails on critical vulnerabilities.
-6. Only after the security gate succeeds does it publish to GHCR.
+| Finding | Result |
+|---|---|
+| Critical + fix available | **Fail** |
+| High + CVSS >= 7 + fix available | **Fail** |
+| Critical/High + no known fix | **Review** |
+| Medium/Low/Negligible/Unknown | **Ignore** |
+| Active documented exception | **Allow** |
+| Expired exception | **Fail** |
 
-A vulnerability can be explicitly ignored in the policy when there is a documented reason:
+A `won't fix` finding is therefore not silently ignored. It remains visible in
+the CI output and can be accepted only with a documented, time-limited
+exception when appropriate:
 
 ```yaml
-ignore:
-  - vulnerability: CVE-XXXX-YYYY
-    reason: "False positive; affected code path is not present."
+exceptions:
+  - id: CVE-XXXX-YYYY
+    reason: "Document why accepting the risk is justified."
+    expires: 2026-09-30
 ```
 
-Avoid using ignores as a substitute for remediation.
+Exceptions are deliberately required to expire.
+
+The policy is separate from Grype's `--fail-on` option so that scanner output
+and publication policy remain independent.
 
 ## Local usage
 
@@ -105,12 +136,15 @@ Requirements:
 - Python 3.11+
 - `syft`
 - `grype`
-- `yq` (optional; the Python validator is the authoritative metadata check)
+- Python 3.11+
+- PyYAML (installed by `make setup`)
 
 Validate the repository:
 
 ```bash
+make setup
 make validate
+make test
 ```
 
 Build an image:

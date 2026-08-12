@@ -1,14 +1,34 @@
 # Global security policy for container-factory.
-#
-# A release is rejected when:
-#   * a vulnerability has CVSS >= max_cvss
-#   * a vulnerability has one of the fail_on_severity values
-#
-# The policy can be overridden per image in metadata.yaml.
+version: 1
 
-max_cvss: 7.0
+security:
+  # Critical and high findings are security-gate candidates.
+  fail_severity:
+    - critical
+    - high
 
-fail_on_severity:
-  - critical
+  # A high finding must meet this CVSS threshold to be a gate failure.
+  high_cvss_threshold: 7.0
 
-ignore: []
+  # For critical/high findings with no known fix:
+  #   review = report but do not fail
+  #   fail   = fail closed
+  no_fix_action: review
+
+  # Never fail on these severities.
+  ignore_severity:
+    - medium
+    - low
+    - negligible
+    - unknown
+
+  # Explicit, time-limited exceptions.
+  # Every exception requires a reason and expiry date.
+  exceptions: []
+
+  # Example:
+  #
+  # exceptions:
+  #   - id: CVE-2026-5450
+  #     reason: "Debian Trixie marks this vulnerability as won't fix."
+  #     expires: 2026-09-30
