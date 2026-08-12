@@ -11,10 +11,18 @@ LABEL \
 
 WORKDIR /workspace
 
-RUN \
-    apt-get update \
+# Install the latest available Debian security updates.
+RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Run as an unprivileged user.
+RUN useradd \
+        --create-home \
+        --uid 10001 \
+        --shell /usr/sbin/nologin \
+        appuser
+
+USER appuser
 
 CMD ["python", "--version"]
