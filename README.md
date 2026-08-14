@@ -1,3 +1,8 @@
+
+[![CI](https://github.com/TheNewThinkTank/container-factory/actions/workflows/ci.yml/badge.svg)](https://github.com/TheNewThinkTank/container-factory/actions/workflows/ci.yml)
+
+[![Release container images](https://github.com/TheNewThinkTank/container-factory/actions/workflows/release.yml/badge.svg)](https://github.com/TheNewThinkTank/container-factory/actions/workflows/release.yml)
+
 # container-factory
 
 A small, opinionated container-image factory for building, testing, scanning, generating SBOMs, and publishing multi-architecture container images.
