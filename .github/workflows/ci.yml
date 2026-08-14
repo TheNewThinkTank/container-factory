@@ -55,6 +55,12 @@ jobs:
             -s tests \
             -v
 
+      - name: Validate shell scripts
+        run: |
+          for script in scripts/*.sh; do
+            bash -n "$script"
+          done
+
   build-and-scan:
     name: Build and scan images
     needs: validate

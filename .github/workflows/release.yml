@@ -26,10 +26,12 @@ on:
 permissions:
   contents: read
   packages: write
+  id-token: write
 
 jobs:
   release:
-    name: Build, scan and publish
+    if: github.ref == 'refs/heads/main'
+    name: Build, attest, scan and sign
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -43,9 +45,7 @@ jobs:
 
       - name: Validate metadata
         if: github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.image
-        run: |
-          python3 scripts/validate-metadata.py \
-            "images/${{ matrix.image }}/metadata.yaml"
+        run: python3 scripts/validate-metadata.py "images/${{ matrix.image }}/metadata.yaml"
 
       - name: Set up Docker Buildx
         if: github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.image
@@ -65,24 +65,44 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build image for security checks
+      - name: Read image metadata
         if: github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.image
+        id: image_metadata
         run: |
-          docker buildx build \
-            --platform linux/amd64 \
-            --tag "container-factory/${{ matrix.image }}:release" \
-            --load "images/${{ matrix.image }}"
+          python3 - <<'PY'
+          from pathlib import Path
+          import yaml
+          import os
+
+          path = Path("images/${{ matrix.image }}/metadata.yaml")
+          data = yaml.safe_load(path.read_text(encoding="utf-8"))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+              f.write(f"name={data['name']}\n")
+              f.write(f"version={data['version']}\n")
+          PY
+
+      - name: Set release tags
+        if: github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.image
+        id: tags
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
+          VERSION: ${{ steps.image_metadata.outputs.version }}
+        run: |
+          VERSION="${VERSION#v}"
+          MAJOR="${VERSION%%.*}"
+          REST="${VERSION#*.}"
+          MINOR="${REST%%.*}"
+          IMAGE="${IMAGE,,}"
+          {
+            echo "image=${IMAGE}"
+            echo "version=${VERSION}"
+            echo "major=${MAJOR}"
+            echo "minor=${MAJOR}.${MINOR}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Install Syft
         if: github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.image
         uses: anchore/sbom-action/download-syft@v0
-
-      - name: Generate SBOM
-        if: github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.image
-        run: |
-          mkdir -p sbom
-          syft "container-factory/${{ matrix.image }}:release" \
-            -o cyclonedx-json="sbom/${{ matrix.image }}.cdx.json"
 
       - name: Install Grype
         if: github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.image
@@ -95,40 +115,65 @@ jobs:
           GRYPE: ${{ steps.grype.outputs.cmd }}
         run: scripts/prepare-grype.sh
 
-      - name: Security gate
+      - name: Build, push and attest multi-arch image
+        if: github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.image
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: images/${{ matrix.image }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ steps.tags.outputs.image }}:${{ steps.tags.outputs.version }}
+            ${{ steps.tags.outputs.image }}:${{ steps.tags.outputs.major }}
+            ${{ steps.tags.outputs.image }}:${{ steps.tags.outputs.minor }}
+            ${{ steps.tags.outputs.image }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.tags.outputs.version }}
+          provenance: mode=max
+          sbom: true
+
+      - name: Show immutable image identity
+        if: github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.image
+        env:
+          IMAGE: ${{ steps.tags.outputs.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          echo "Image: ${IMAGE}"
+          echo "Digest: ${DIGEST}"
+          echo "Immutable reference: ${IMAGE}@${DIGEST}"
+
+      - name: Security gate on published digest
         if: github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.image
         env:
           SECURITY_PYTHON: .venv-security/bin/python
           GRYPE: ${{ steps.grype.outputs.cmd }}
           GRYPE_DB_MAX_ALLOWED_BUILT_AGE: "48h"
         run: |
-          scripts/scan-image.sh \
-            "${{ matrix.image }}" \
-            release
+          scripts/scan-multiarch-image.sh \
+            "${{ steps.tags.outputs.image }}@${{ steps.build.outputs.digest }}"
 
-      - name: Read metadata
+      - name: Install Cosign
         if: github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.image
-        id: metadata
-        run: |
-          python3 scripts/validate-metadata.py \
-            "images/${{ matrix.image }}/metadata.yaml"
+        uses: sigstore/cosign-installer@v4.1.2
 
-      - name: Build and push multi-arch image
+      - name: Sign immutable image digest
         if: github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.image
         env:
-          IMAGE_NAME: ${{ steps.metadata.outputs.name }}
-          VERSION: ${{ steps.metadata.outputs.version }}
-          OWNER: ${{ github.repository_owner }}
-        run: |
-          IMAGE="ghcr.io/${OWNER,,}/${IMAGE_NAME}"
+          IMAGE: ${{ steps.tags.outputs.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: scripts/sign-image.sh "${IMAGE}@${DIGEST}"
 
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --tag "${IMAGE}:${VERSION}" \
-            --tag "${IMAGE}:latest" \
-            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
-            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
-            --push "images/${{ matrix.image }}"
+      - name: Verify signature
+        if: github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.image
+        env:
+          COSIGN_CERTIFICATE_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/release.yml@refs/heads/main
+          COSIGN_OIDC_ISSUER: https://token.actions.githubusercontent.com
+          IMAGE: ${{ steps.tags.outputs.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: scripts/verify-image.sh "${IMAGE}@${DIGEST}"
 
       - name: Upload security reports
         if: always() && (github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.image)

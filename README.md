@@ -1,92 +1,113 @@
-
 [![CI](https://github.com/TheNewThinkTank/container-factory/actions/workflows/ci.yml/badge.svg)](https://github.com/TheNewThinkTank/container-factory/actions/workflows/ci.yml)
 [![Release container images](https://github.com/TheNewThinkTank/container-factory/actions/workflows/release.yml/badge.svg)](https://github.com/TheNewThinkTank/container-factory/actions/workflows/release.yml)
 
 # container-factory
 
-A small, opinionated container-image factory for building, testing, scanning, generating SBOMs, and publishing multi-architecture container images.
+A small, opinionated container-image factory for building, testing, scanning,
+attesting, signing, and publishing multi-architecture container images.
 
-The v1 implementation is designed around:
+## v2 supply-chain model
 
-- GitHub Actions
-- Docker Buildx / BuildKit
-- `linux/amd64` and `linux/arm64`
-- Grype vulnerability scanning
-- SBOM generation with Syft
-- a configurable CVSS security gate
-- GitHub Container Registry (GHCR)
-- versioned image tags
-- Dependabot for dependency/base-image maintenance
-- local development through a Makefile
+v2 makes the immutable image digest the identity of a release. The release
+workflow:
+
+1. validates image metadata;
+2. builds and pushes `linux/amd64` and `linux/arm64` with Docker Buildx;
+3. attaches an SBOM attestation;
+4. attaches max-level BuildKit provenance;
+5. records the resulting immutable digest;
+6. scans the exact platform manifests behind that digest with Grype;
+7. evaluates the factory security policy;
+8. signs the exact multi-architecture digest with Sigstore/Cosign using GitHub
+   Actions OIDC; and
+9. verifies the signature before the job completes.
+
+Docker Buildx supports SBOM and provenance attestations directly through
+`docker/build-push-action`; provenance is generated as an in-toto attestation
+and attached to the final image.
+
+Cosign keyless signing binds an ephemeral signing key to the GitHub Actions
+OIDC identity and records the signing event in Sigstore's transparency log.
+citeturn0search1turn0search2
 
 ## Repository layout
 
 ```text
 container-factory/
 ├── images/
-│   ├── hello/
-│   │   ├── Dockerfile
-│   │   └── metadata.yaml
-│   └── python/
-│       ├── Dockerfile
-│       └── metadata.yaml
 ├── scripts/
 │   ├── build-image.sh
+│   ├── generate-sbom.sh
+│   ├── inspect-image-digest.sh
+│   ├── prepare-grype.sh
+│   ├── promote-image.sh
 │   ├── scan-image.sh
+│   ├── scan-multiarch-image.sh
 │   ├── security-policy.sh
 │   ├── setup-security-tools.sh
-│   ├── generate-sbom.sh
-│   └── validate-metadata.py
-├── src/
-│   └── container_factory/
-│       └── security/
-│           └── policy.py
+│   ├── sign-image.sh
+│   ├── validate-metadata.py
+│   └── verify-image.sh
+├── src/container_factory/
 ├── tests/
-│   └── test_security_policy.py
-├── requirements-dev.txt
-├── .github/
-│   ├── workflows/
-│   │   ├── ci.yml
-│   │   └── release.yml
-│   └── dependabot.yml
-├── .config/
-│   └── security-policy.yaml
-├── Makefile
-├── compose.yaml
-├── .dockerignore
-└── .gitignore
+├── .config/security-policy.yaml
+└── .github/workflows/
+    ├── ci.yml
+    └── release.yml
 ```
 
-`hello` is intentionally tiny and acts as an end-to-end smoke-test image. `python` demonstrates a useful real image definition.
+## Immutable image identity
 
-## Image metadata
+Tags are human-friendly pointers. They are not the security identity of an
+artifact. v2 uses:
 
-Each image has a `metadata.yaml`:
+```text
+ghcr.io/<owner>/<image>@sha256:<digest>
+```
+
+The digest returned by the Buildx release step is the digest used for security
+scanning, signing, and verification.
+
+## Attestations
+
+The release build uses:
+
+```text
+provenance: mode=max
+sbom: true
+```
+
+BuildKit attaches these attestations to the pushed image rather than producing
+only detached CI files.
+
+## Signing
+
+The release workflow uses keyless Cosign signing. No long-lived private key is
+stored in GitHub secrets. The workflow requires:
 
 ```yaml
-name: python
-version: "3.14"
-description: Python runtime based on Debian Trixie slim.
-dockerfile: Dockerfile
-architectures:
-  - linux/amd64
-  - linux/arm64
-registry:
-  - ghcr
-scan:
-  max_cvss: 7.0
+permissions:
+  packages: write
+  id-token: write
 ```
 
-The metadata is deliberately simple in v1. The CI workflow validates each image definition and uses the metadata to determine how an image should be published.
+Cosign signs the immutable digest, not a mutable tag. Verification is restricted
+to the release workflow identity for this repository on `main`.
+
+For local verification after a release, install Cosign and run:
+
+```bash
+export COSIGN_CERTIFICATE_IDENTITY='https://github.com/TheNewThinkTank/container-factory/.github/workflows/release.yml@refs/heads/main'
+make verify IMAGE=python DIGEST=sha256:<digest>
+```
+
+Sigstore documents keyless container signing and verification with Cosign.
+citeturn0search1turn0search3
 
 ## Security policy
 
-The security policy is global and lives in `.config/security-policy.yaml`.
-
-Grype is used to discover vulnerabilities; the factory's Python policy engine
-decides whether they block publication.
-
-The default policy is:
+Grype discovers vulnerabilities; the factory's Python policy engine decides
+whether they block publication. The default policy is:
 
 ```yaml
 security:
@@ -103,181 +124,66 @@ security:
   exceptions: []
 ```
 
-This means:
-
-| Finding | Result |
-|---|---|
-| Critical + fix available | **Fail** |
-| High + CVSS >= 7 + fix available | **Fail** |
-| Critical/High + no known fix | **Review** |
-| Medium/Low/Negligible/Unknown | **Ignore** |
-| Active documented exception | **Allow** |
-| Expired exception | **Fail** |
-
-A `won't fix` finding is therefore not silently ignored. It remains visible in
-the CI output and can be accepted only with a documented, time-limited
-exception when appropriate:
-
-```yaml
-exceptions:
-  - id: CVE-XXXX-YYYY
-    reason: "Document why accepting the risk is justified."
-    expires: 2026-09-30
-```
-
-Exceptions are deliberately required to expire.
-
-The policy is separate from Grype's `--fail-on` option so that scanner output
-and publication policy remain independent.
+The release scan is performed against the exact child manifests for the
+supported Linux architectures rather than against a separately rebuilt image.
 
 ## Local usage
 
 Requirements:
 
-- Docker
-- Docker Buildx
+- Docker + Buildx
 - Bash
 - Python 3.11+
-- `syft`
-- `grype`
-- Python 3.11+
-- PyYAML (installed by `make setup`)
-
-Validate the repository:
+- PyYAML
+- Syft
+- Grype
+- Cosign for signing/verification
 
 ```bash
 make setup
 make validate
 make test
-```
-
-Build an image:
-
-```bash
 make build IMAGE=hello
-```
-
-Generate an SBOM:
-
-```bash
 make sbom IMAGE=hello
-```
-
-Scan an image:
-
-```bash
 make scan IMAGE=hello
 ```
 
-Run the full local security pipeline:
+Inspect a registry image:
 
 ```bash
-make security IMAGE=hello
+make inspect REGISTRY_IMAGE=ghcr.io/thenewthinktank/python
 ```
 
-The local scripts use the same policy file as CI.
+Verify a released digest:
+
+```bash
+export COSIGN_CERTIFICATE_IDENTITY='https://github.com/TheNewThinkTank/container-factory/.github/workflows/release.yml@refs/heads/main'
+make verify IMAGE=python DIGEST=sha256:<digest>
+```
 
 ## GitHub setup
 
-Create a GitHub repository and push this directory.
-
-The release workflow uses GitHub's built-in `GITHUB_TOKEN` to publish to GHCR. In the repository settings, ensure Actions have permission to write packages:
-
-**Settings → Actions → General → Workflow permissions → Read and write permissions**
-
-The workflow also explicitly requests:
+The release workflow publishes to GHCR using `GITHUB_TOKEN`. It also needs
+GitHub's OIDC token permission for keyless signing:
 
 ```yaml
 permissions:
   contents: read
   packages: write
+  id-token: write
 ```
 
-No registry password is required for GHCR.
+No Cosign private key or registry password is required.
 
-## Image names and tags
+## v2 scope
 
-Published images use:
+v2 deliberately focuses on four supply-chain primitives:
 
-```text
-ghcr.io/<github-owner>/<image-name>:<version>
-ghcr.io/<github-owner>/<image-name>:<major>
-ghcr.io/<github-owner>/<image-name>:<major>.<minor>
-ghcr.io/<github-owner>/<image-name>:latest
-```
+- immutable OCI digests;
+- SBOM attestations;
+- SLSA/in-toto-style BuildKit provenance;
+- keyless Sigstore/Cosign signatures and verification.
 
-`latest` is only updated for a release on the default branch.
-
-The version is currently taken from `metadata.yaml`. In a future version, this can be replaced by Git tags or a release manifest.
-
-## CI behaviour
-
-Pull requests run:
-
-- metadata validation
-- Dockerfile syntax/build checks
-- local image build
-- SBOM generation
-- vulnerability scanning
-
-Pushes to the default branch run the same checks.
-
-A release is published when an image's `metadata.yaml` changes its version, or when the workflow is manually dispatched.
-
-## Design principles
-
-### Fail closed
-
-A security failure prevents publication.
-
-### Reproducible enough
-
-Images pin major/minor runtime versions in metadata and use explicit Dockerfiles. Digest pinning can be added in v2.
-
-### Multi-architecture by default
-
-Images are built for:
-
-```text
-linux/amd64
-linux/arm64
-```
-
-This is useful for x86 servers, Apple Silicon development machines, and ARM homelab nodes.
-
-### Keep the factory boring
-
-The repository intentionally avoids a custom build framework in v1. GitHub Actions, Docker Buildx, Syft, and Grype are mature tools and are easier to understand and maintain than a bespoke abstraction.
-
-## Roadmap
-
-Potential v2 additions:
-
-- Cosign image signing
-- SLSA provenance
-- registry promotion
-- Docker Hub publishing
-- digest pinning
-- automated base-image rebuilds
-- policy exceptions with expiry dates
-- SARIF results in GitHub Security
-- reusable workflows for other repositories
-- image catalogue generation
-
-## v1.1 hardening
-
-v1.1 strengthens the v1 foundation before introducing supply-chain signing and
-provenance in v2:
-
-- metadata is validated against the documented factory contract;
-- image names must match their directory names;
-- metadata versions must be valid SemVer;
-- referenced Dockerfiles must exist inside the image directory;
-- architectures and registries are validated against the v1-supported set;
-- Grype's vulnerability database is explicitly updated and verified before
-  security scans;
-- CI/release manual image selection no longer continues through unrelated
-  matrix entries.
-
-The v1.1 goal is deliberately limited: make the existing build, SBOM, scan and
-policy pipeline predictable before adding provenance and signing.
+Admission control, policy engines, registry promotion, and consumer-side
+verification beyond signature identity are intentionally left for later
+versions.

@@ -1,29 +1,30 @@
 # Changelog
 
-## 1.1.0
-
-Hardening release before the v2 supply-chain work.
+## 2.0.0 — 2026-08-14
 
 ### Added
 
-- Centralized image metadata validation in `src/container_factory/metadata.py`.
-- Validation tests for metadata schema and filesystem constraints.
-- Explicit `scripts/prepare-grype.sh` to update and verify the Grype database.
-- Additional security-policy tests for CVSS boundaries, fail-closed no-fix mode,
-  and exception expiry semantics.
+- Immutable OCI digest as the release artifact identity.
+- Multi-architecture Buildx release build using `linux/amd64` and `linux/arm64`.
+- BuildKit SBOM attestations.
+- Max-level BuildKit provenance attestations.
+- Exact-digest multi-architecture vulnerability scanning.
+- Keyless Sigstore/Cosign signing using GitHub Actions OIDC.
+- Signature verification bound to the release workflow identity.
+- Scripts for digest inspection, signing, verification and multi-architecture scanning.
+- Local Makefile targets for image inspection, signing and verification.
+- CI shell-script syntax validation.
 
 ### Changed
 
-- CI and release workflows explicitly prepare the Grype vulnerability database
-  before scanning.
-- `make validate` validates every image metadata file automatically.
-- Release workflow manual dispatch now skips unrelated matrix entries correctly.
-- Metadata validation now enforces the documented v1 contract.
+- Release workflow now uses `docker/build-push-action@v7`.
+- Release workflow requests `id-token: write` for keyless signing.
+- Security scanning happens against the exact published digest.
+- Manual releases are restricted to the `main` branch so the verification identity is stable.
 
-### Deliberately deferred to v2
+## 1.1.0 — 2026-08-14
 
-- Digest pinning
-- OCI SBOM attestations
-- SLSA provenance
-- Cosign signing
-- Consumer-side signature and provenance verification
+- Hardened metadata validation.
+- Added explicit Grype database preparation.
+- Expanded policy tests.
+- Fixed manual release selection.
