@@ -83,6 +83,11 @@ jobs:
         id: grype
         uses: anchore/scan-action/download-grype@v7
 
+      - name: Check Grype
+        run: |
+          grype version
+          grype db status
+
       - name: Security gate
         env:
           SECURITY_PYTHON: .venv-security/bin/python
