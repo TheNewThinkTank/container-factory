@@ -1,6 +1,5 @@
 
 [![CI](https://github.com/TheNewThinkTank/container-factory/actions/workflows/ci.yml/badge.svg)](https://github.com/TheNewThinkTank/container-factory/actions/workflows/ci.yml)
-
 [![Release container images](https://github.com/TheNewThinkTank/container-factory/actions/workflows/release.yml/badge.svg)](https://github.com/TheNewThinkTank/container-factory/actions/workflows/release.yml)
 
 # container-factory
