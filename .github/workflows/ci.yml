@@ -106,6 +106,7 @@ jobs:
         env:
           SECURITY_PYTHON: .venv-security/bin/python
           GRYPE: ${{ steps.grype.outputs.cmd }}
+          GRYPE_DB_MAX_ALLOWED_BUILT_AGE: "48h"
         run: |
           scripts/scan-image.sh \
             "${{ matrix.image }}" \

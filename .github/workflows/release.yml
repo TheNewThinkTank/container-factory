@@ -83,17 +83,18 @@ jobs:
         id: grype
         uses: anchore/scan-action/download-grype@v7
 
-      - name: Check Grype
-        env:
-          GRYPE: ${{ steps.grype.outputs.cmd }}
-        run: |
-          ${GRYPE} version
-          ${GRYPE} db status
+      # - name: Check Grype
+      #   env:
+      #     GRYPE: ${{ steps.grype.outputs.cmd }}
+      #   run: |
+      #     ${GRYPE} version
+      #     ${GRYPE} db status
 
       - name: Security gate
         env:
           SECURITY_PYTHON: .venv-security/bin/python
           GRYPE: ${{ steps.grype.outputs.cmd }}
+          GRYPE_DB_MAX_ALLOWED_BUILT_AGE: "48h"
         run: |
           scripts/scan-image.sh \
           "${{ matrix.image }}" \
