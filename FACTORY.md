@@ -162,3 +162,24 @@ Potential future additions:
 - SARIF results in GitHub Security
 - reusable workflows
 - image catalogue generation
+
+## v1.1 hardening
+
+v1.1 adds a stricter metadata contract and an explicit Grype database lifecycle.
+
+Metadata validation now requires:
+
+- `name`
+- `version`
+- `description`
+- `dockerfile`
+- `architectures`
+- `registry`
+
+It also checks that the image name matches its directory, the version is valid
+SemVer, the referenced Dockerfile exists inside the image directory, supported
+architectures are used, and registry names are supported by the factory.
+
+CI and release jobs explicitly update and verify the Grype vulnerability
+ database before scanning. This prevents a missing vulnerability database from
+being mistaken for a successful security setup.

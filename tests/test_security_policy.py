@@ -81,6 +81,49 @@ class SecurityPolicyTests(unittest.TestCase):
         self.assertEqual(len(result["failures"]), 1)
         self.assertEqual(len(result["expired"]), 1)
 
+
+    def test_high_below_cvss_threshold_is_ignored(self):
+        result = evaluate(
+            [self.finding(cvss=6.9)], self.policy, today=self.today
+        )
+        self.assertFalse(result["failures"])
+        self.assertEqual(len(result["ignored"]), 1)
+
+    def test_high_at_cvss_threshold_fails(self):
+        result = evaluate(
+            [self.finding(cvss=7.0)], self.policy, today=self.today
+        )
+        self.assertEqual(len(result["failures"]), 1)
+
+    def test_no_fix_can_fail_closed(self):
+        policy = Policy(
+            **{**self.policy.__dict__, "no_fix_action": "fail"}
+        )
+        result = evaluate(
+            [self.finding(fix_available=False, fix_state="wont-fix")],
+            policy,
+            today=self.today,
+        )
+        self.assertEqual(len(result["failures"]), 1)
+        self.assertFalse(result["reviews"])
+
+    def test_expiring_today_exception_is_still_active(self):
+        policy = Policy(
+            **{
+                **self.policy.__dict__,
+                "exceptions": {
+                    "CVE-TEST-1": ExceptionRule(
+                        "CVE-TEST-1",
+                        "Temporary exception.",
+                        self.today,
+                    )
+                },
+            }
+        )
+        result = evaluate([self.finding()], policy, today=self.today)
+        self.assertFalse(result["failures"])
+        self.assertEqual(len(result["exceptions"]), 1)
+
     def test_medium_is_ignored(self):
         result = evaluate(
             [self.finding(severity="medium", cvss=5.0)],

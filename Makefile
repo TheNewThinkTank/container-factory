@@ -5,7 +5,7 @@ TAG ?= local
 PLATFORMS ?= linux/amd64
 SECURITY_PYTHON ?= .venv-security/bin/python
 
-.PHONY: help setup validate build sbom scan security clean
+.PHONY: help setup validate prepare-grype build sbom scan security test clean
 
 help:
 	@echo "Targets:"
@@ -22,7 +22,16 @@ setup:
 	scripts/setup-security-tools.sh
 
 validate:
-	python3 scripts/validate-metadata.py
+	@set -e; \
+	for image in images/*; do \
+		if [ -f "$$image/metadata.yaml" ]; then \
+			echo "Validating $$image/metadata.yaml"; \
+			python3 scripts/validate-metadata.py "$$image/metadata.yaml"; \
+		fi; \
+	done
+
+prepare-grype:
+	scripts/prepare-grype.sh
 
 build:
 	IMAGE=$(IMAGE) TAG=$(TAG) PLATFORMS=$(PLATFORMS) scripts/build-image.sh

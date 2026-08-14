@@ -15,7 +15,7 @@ The v1 implementation is designed around:
 - SBOM generation with Syft
 - a configurable CVSS security gate
 - GitHub Container Registry (GHCR)
-- immutable versioned image tags
+- versioned image tags
 - Dependabot for dependency/base-image maintenance
 - local development through a Makefile
 
@@ -77,7 +77,7 @@ scan:
   max_cvss: 7.0
 ```
 
-The metadata is deliberately simple in v1. The CI workflow discovers changed image directories and uses the metadata to determine how an image should be built and published.
+The metadata is deliberately simple in v1. The CI workflow validates each image definition and uses the metadata to determine how an image should be published.
 
 ## Security policy
 
@@ -263,3 +263,21 @@ Potential v2 additions:
 - SARIF results in GitHub Security
 - reusable workflows for other repositories
 - image catalogue generation
+
+## v1.1 hardening
+
+v1.1 strengthens the v1 foundation before introducing supply-chain signing and
+provenance in v2:
+
+- metadata is validated against the documented factory contract;
+- image names must match their directory names;
+- metadata versions must be valid SemVer;
+- referenced Dockerfiles must exist inside the image directory;
+- architectures and registries are validated against the v1-supported set;
+- Grype's vulnerability database is explicitly updated and verified before
+  security scans;
+- CI/release manual image selection no longer continues through unrelated
+  matrix entries.
+
+The v1.1 goal is deliberately limited: make the existing build, SBOM, scan and
+policy pipeline predictable before adding provenance and signing.
