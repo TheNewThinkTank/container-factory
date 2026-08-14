@@ -84,9 +84,11 @@ jobs:
         uses: anchore/scan-action/download-grype@v7
 
       - name: Check Grype
+        env:
+          GRYPE: ${{ steps.grype.outputs.cmd }}
         run: |
-          grype version
-          grype db status
+          ${GRYPE} version
+          ${GRYPE} db status
 
       - name: Security gate
         env:
