@@ -1,4 +1,4 @@
-FROM python:3.14-slim-trixie
+FROM python:3.14.7-slim-trixie
 
 ENV \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -6,7 +6,7 @@ ENV \
 
 LABEL \
     org.opencontainers.image.title="Python" \
-    org.opencontainers.image.description="Python 3.14 runtime based on Debian Trixie slim" \
+    org.opencontainers.image.description="Python 3.14.7 runtime based on Debian Trixie slim" \
     org.opencontainers.image.source="https://github.com/TheNewThinkTank/container-factory"
 
 WORKDIR /workspace
