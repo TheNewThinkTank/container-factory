@@ -135,6 +135,13 @@ jobs:
           provenance: mode=max
           sbom: true
 
+      - name: Validate published image index
+        if: github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.image
+        env:
+          IMAGE: ${{ steps.tags.outputs.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: scripts/assert-image-index.sh "${IMAGE}@${DIGEST}"
+
       - name: Show immutable image identity
         if: github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.image
         env:
@@ -174,6 +181,15 @@ jobs:
           IMAGE: ${{ steps.tags.outputs.image }}
           DIGEST: ${{ steps.build.outputs.digest }}
         run: scripts/verify-image.sh "${IMAGE}@${DIGEST}"
+
+      - name: Verify SBOM and provenance attestations
+        if: github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.image
+        env:
+          COSIGN_CERTIFICATE_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/release.yml@refs/heads/main
+          COSIGN_OIDC_ISSUER: https://token.actions.githubusercontent.com
+          IMAGE: ${{ steps.tags.outputs.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: scripts/verify-attestations.sh "${IMAGE}@${DIGEST}"
 
       - name: Upload security reports
         if: always() && (github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.image)

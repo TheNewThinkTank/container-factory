@@ -15,12 +15,16 @@ workflow:
 2. builds and pushes `linux/amd64` and `linux/arm64` with Docker Buildx;
 3. attaches an SBOM attestation;
 4. attaches max-level BuildKit provenance;
-5. records the resulting immutable digest;
-6. scans the exact platform manifests behind that digest with Grype;
-7. evaluates the factory security policy;
-8. signs the exact multi-architecture digest with Sigstore/Cosign using GitHub
-   Actions OIDC; and
-9. verifies the signature before the job completes.
+5. validates that the Buildx digest identifies a real multi-platform image
+   index containing `linux/amd64` and `linux/arm64`;
+6. records the resulting immutable image-index digest;
+7. scans the exact platform manifests behind that digest with Grype;
+8. evaluates the factory security policy;
+9. signs the exact multi-architecture digest with Sigstore/Cosign using GitHub
+   Actions OIDC;
+10. verifies the signature; and
+11. verifies that both the SBOM and SLSA provenance attestations are attached
+    to and cryptographically verified for that same digest.
 
 Docker Buildx supports SBOM and provenance attestations directly through
 `docker/build-push-action`; provenance is generated as an in-toto attestation
@@ -77,8 +81,9 @@ provenance: mode=max
 sbom: true
 ```
 
-BuildKit attaches these attestations to the pushed image rather than producing
-only detached CI files.
+BuildKit attaches these attestations to the pushed image. OCI registries may
+represent these attachments as separate referrer artifacts. Those referrer
+digests are deliberately not confused with the digest of the image index itself.
 
 ## Signing
 

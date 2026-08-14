@@ -22,6 +22,8 @@ command -v "${GRYPE}" >/dev/null 2>&1 || [[ -x "${GRYPE}" ]] || {
 
 mkdir -p "${REPORT_DIR}"
 
+"${ROOT}/scripts/assert-image-index.sh" "${IMAGE_REF}"
+
 RAW="$(docker buildx imagetools inspect --raw "${IMAGE_REF}")"
 MANIFESTS="$(printf '%s' "${RAW}" | jq -r '
   if .manifests then
