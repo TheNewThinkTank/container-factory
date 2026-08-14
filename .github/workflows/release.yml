@@ -80,12 +80,17 @@ jobs:
             -o cyclonedx-json="sbom/${{ matrix.image }}.cdx.json"
 
       - name: Install Grype
+        id: grype
         uses: anchore/scan-action/download-grype@v7
 
       - name: Security gate
         env:
           SECURITY_PYTHON: .venv-security/bin/python
-        run: scripts/scan-image.sh "${{ matrix.image }}" release
+          GRYPE: ${{ steps.grype.outputs.cmd }}
+        run: |
+          scripts/scan-image.sh \
+          "${{ matrix.image }}" \
+          release
 
       - name: Build and push multi-arch image
         env:
