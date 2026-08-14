@@ -19,7 +19,17 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Validate metadata
-        run: python3 scripts/validate-metadata.py
+        run: |
+          for image in images/*; do
+            if [ -f "$image/metadata.yaml" ]; then
+              echo "========================================"
+              echo "Validating: $image/metadata.yaml"
+              echo "========================================"
+
+              python3 scripts/validate-metadata.py \
+                "$image/metadata.yaml"
+            fi
+          done
 
       - name: Set up security-policy Python
         run: |
