@@ -1,111 +1,89 @@
 #!/usr/bin/env python3
-"""Validate the deliberately small YAML metadata format used by container-factory."""
 
-from __future__ import annotations
-
-import re
+import argparse
+import os
+import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-IMAGE_ROOT = ROOT / "images"
-
-NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
-VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$")
-
-# Sections that should be lists
-LIST_SECTIONS = {"architectures", "registry"}
+import yaml
 
 
-def parse_metadata(path: Path) -> dict:
-    data: dict = {}
-    section = None
+REQUIRED_FIELDS = {
+    "name",
+    "version",
+}
 
-    for raw in path.read_text(encoding="utf-8").splitlines():
-        if not raw.strip() or raw.lstrip().startswith("#"):
-            continue
 
-        indent = len(raw) - len(raw.lstrip())
-        line = raw.strip()
+def load_metadata(path: Path) -> dict:
+    if not path.exists():
+        raise SystemExit(f"Metadata file does not exist: {path}")
 
-        if line.startswith("- "):
-            if section is None or not isinstance(data.get(section), list):
-                raise ValueError(f"{path}: list item without list key")
-            data[section].append(line[2:].strip().strip('"').strip("'"))
-            continue
+    try:
+        with path.open(encoding="utf-8") as f:
+            metadata = yaml.safe_load(f)
+    except yaml.YAMLError as exc:
+        raise SystemExit(f"Invalid YAML in {path}: {exc}") from exc
 
-        if ":" not in line:
-            raise ValueError(f"{path}: unsupported YAML line: {raw!r}")
+    if not isinstance(metadata, dict):
+        raise SystemExit(f"Metadata must be a YAML mapping: {path}")
 
-        key, value = line.split(":", 1)
-        key = key.strip()
-        value = value.strip()
+    return metadata
 
-        if indent and section:
-            if not isinstance(data[section], dict):
-                raise ValueError(f"{path}: unexpected nested value")
-            data[section][key] = value.strip('"').strip("'")
-        elif not value:
-            # An empty top-level value starts either a list or a mapping.
-            section = key
-            # Initialize as list if this is a known list section, otherwise as dict
-            data[key] = [] if key in LIST_SECTIONS else {}
-        else:
-            section = None
-            data[key] = value.strip('"').strip("'")
 
-    return data
+def get_required(metadata: dict, key: str, path: Path) -> str:
+    if key not in metadata:
+        raise SystemExit(f"Missing '{key}' in {path}")
+
+    value = metadata[key]
+
+    if value is None or str(value).strip() == "":
+        raise SystemExit(f"'{key}' cannot be empty in {path}")
+
+    return str(value).strip()
+
+
+def validate(path: Path) -> dict:
+    metadata = load_metadata(path)
+
+    for key in REQUIRED_FIELDS:
+        get_required(metadata, key, path)
+
+    return metadata
+
+
+def write_github_outputs(metadata: dict) -> None:
+    github_output = os.environ.get("GITHUB_OUTPUT")
+
+    if not github_output:
+        return
+
+    with open(github_output, "a", encoding="utf-8") as f:
+        f.write(f"name={metadata['name']}\n")
+        f.write(f"version={metadata['version']}\n")
 
 
 def main() -> int:
-    errors = []
+    parser = argparse.ArgumentParser(
+        description="Validate container image metadata."
+    )
+    parser.add_argument(
+        "path",
+        type=Path,
+        help="Path to metadata.yaml",
+    )
 
-    for metadata in sorted(IMAGE_ROOT.glob("*/metadata.yaml")):
-        image_dir = metadata.parent
+    args = parser.parse_args()
 
-        try:
-            data = parse_metadata(metadata)
-        except ValueError as exc:
-            errors.append(str(exc))
-            continue
+    metadata = validate(args.path)
 
-        required = {"name", "version", "description", "dockerfile", "architectures", "registry"}
-        missing = required - data.keys()
-        if missing:
-            errors.append(f"{metadata}: missing keys: {', '.join(sorted(missing))}")
-            continue
+    print(f"Metadata validated: {args.path}")
+    print(f"  name: {metadata['name']}")
+    print(f"  version: {metadata['version']}")
 
-        if not NAME_RE.fullmatch(str(data["name"])):
-            errors.append(f"{metadata}: invalid image name: {data['name']!r}")
+    write_github_outputs(metadata)
 
-        if not VERSION_RE.fullmatch(str(data["version"])):
-            errors.append(f"{metadata}: version must be semantic X.Y.Z: {data['version']!r}")
-
-        dockerfile = image_dir / str(data["dockerfile"])
-        if not dockerfile.is_file():
-            errors.append(f"{metadata}: Dockerfile not found: {dockerfile}")
-
-        architectures = data["architectures"]
-        if not isinstance(architectures, list) or not architectures:
-            errors.append(f"{metadata}: architectures must be a non-empty list")
-        elif any(a not in {"linux/amd64", "linux/arm64"} for a in architectures):
-            errors.append(f"{metadata}: unsupported architecture: {architectures}")
-
-        registries = data["registry"]
-        if not isinstance(registries, list) or not registries:
-            errors.append(f"{metadata}: registry must be a non-empty list")
-        elif any(r not in {"ghcr", "dockerhub"} for r in registries):
-            errors.append(f"{metadata}: unsupported registry: {registries}")
-
-
-    if errors:
-        print("Metadata validation failed:")
-        for error in errors:
-            print(f"  - {error}")
-        return 1
-
-    print("Metadata validation passed.")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())

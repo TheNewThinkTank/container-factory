@@ -45,22 +45,8 @@ jobs:
       - name: Read metadata
         id: metadata
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          path = Path("images/${{ matrix.image }}/metadata.yaml")
-          text = path.read_text()
-
-          def get(key):
-              match = re.search(rf"^{key}:\s*["']?([^"'\n]+)["']?\s*$", text, re.M)
-              if not match:
-                  raise SystemExit(f"Missing {key} in {path}")
-              return match.group(1).strip()
-
-          print(f"name={get('name')}")
-          print(f"version={get('version')}")
-          PY
+          python3 scripts/validate-metadata.py \
+            "images/${{ matrix.image }}/metadata.yaml"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
