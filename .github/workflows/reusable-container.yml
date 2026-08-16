@@ -13,10 +13,6 @@ on:
         default: false
         type: boolean
 
-permissions:
-  contents: read
-  packages: write
-  id-token: write
 
 jobs:
   build:

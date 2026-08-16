@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.1.1
+
+- Fix reusable workflow permissions: elevated `packages: write` and `id-token: write` are no longer declared by the called workflow.
+- CI now supplies only `contents: read`; Release supplies `packages: write` and `id-token: write`.
+- Keeps least-privilege permissions at the caller boundary, as required by GitHub reusable-workflow permission propagation.
+
+
 ## 2.1.0
 
 - Add a reusable container workflow as the single implementation of build and security-gate logic.

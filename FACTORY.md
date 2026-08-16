@@ -19,6 +19,9 @@ registry:
   - ghcr
 ```
 
+
+> **v2.1.1:** The reusable workflow intentionally declares no elevated `GITHUB_TOKEN` permissions. Callers grant only the permissions they need: CI is read-only; Release grants package publishing and OIDC signing.
+
 ## v2 artifact contract
 
 A published image has two identities:
