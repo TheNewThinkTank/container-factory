@@ -13,10 +13,8 @@ command -v jq >/dev/null 2>&1 || { echo "ERROR: jq is required" >&2; exit 127; }
 
 echo "Verifying BuildKit attestations for ${IMAGE_REF}"
 
-INSPECT_JSON="$(docker buildx imagetools inspect "${IMAGE_REF}" --format '{{json .}}')"
-
-SBOM_JSON="$(printf '%s' "${INSPECT_JSON}" | jq -c '.SBOM // null')"
-PROVENANCE_JSON="$(printf '%s' "${INSPECT_JSON}" | jq -c '.Provenance // null')"
+SBOM_JSON="$(docker buildx imagetools inspect "${IMAGE_REF}" --format '{{json .SBOM}}')"
+PROVENANCE_JSON="$(docker buildx imagetools inspect "${IMAGE_REF}" --format '{{json .Provenance}}')"
 
 if [[ -z "${SBOM_JSON}" || "${SBOM_JSON}" == "null" ]]; then
   echo "ERROR: no SBOM attestation found" >&2

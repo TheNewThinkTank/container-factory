@@ -23,3 +23,8 @@
 - Add multi-platform builds.
 - Add SBOM and SLSA provenance attestations.
 - Add keyless Cosign signing and signature verification.
+
+## 2.0.4
+
+- Fix BuildKit attestation verification to query `.SBOM` and `.Provenance` directly with `docker buildx imagetools inspect --format`, rather than serializing the whole inspect object.
+- Keep platform-specific SPDX and SLSA v1 validation fail-closed.
