@@ -106,7 +106,7 @@ to the release workflow identity for this repository on `main`.
 For local verification after a release, install Cosign and run:
 
 ```bash
-export COSIGN_CERTIFICATE_IDENTITY='https://github.com/TheNewThinkTank/container-factory/.github/workflows/release.yml@refs/heads/main'
+export COSIGN_CERTIFICATE_IDENTITY='https://github.com/TheNewThinkTank/container-factory/.github/workflows/reusable-container.yml@refs/heads/main'
 make verify IMAGE=python DIGEST=sha256:<digest>
 ```
 
@@ -166,7 +166,7 @@ make inspect REGISTRY_IMAGE=ghcr.io/thenewthinktank/python
 Verify a released digest:
 
 ```bash
-export COSIGN_CERTIFICATE_IDENTITY='https://github.com/TheNewThinkTank/container-factory/.github/workflows/release.yml@refs/heads/main'
+export COSIGN_CERTIFICATE_IDENTITY='https://github.com/TheNewThinkTank/container-factory/.github/workflows/reusable-container.yml@refs/heads/main'
 make verify IMAGE=python DIGEST=sha256:<digest>
 ```
 

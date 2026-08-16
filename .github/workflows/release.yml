@@ -12,18 +12,6 @@ on:
       - "scripts/**"
       - ".github/workflows/release.yml"
       - ".github/workflows/reusable-container.yml"
-  workflow_dispatch:
-    inputs:
-      image:
-        description: Image to release, or "all"
-        required: true
-        default: all
-        type: choice
-        options:
-          - all
-          - hello
-          - python
-
 permissions:
   contents: read
 

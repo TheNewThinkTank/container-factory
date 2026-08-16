@@ -1,0 +1,31 @@
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class WorkflowSecurityTests(unittest.TestCase):
+    def test_release_does_not_reference_matrix_in_job_if(self):
+        text = (ROOT / ".github/workflows/release.yml").read_text()
+        self.assertNotIn("if: github.ref == 'refs/heads/main'", text)
+        self.assertNotIn("matrix.image)", text)
+
+    def test_release_matrix_contains_all_images(self):
+        text = (ROOT / ".github/workflows/release.yml").read_text()
+        self.assertIn("image:\n          - hello\n          - python", text)
+
+    def test_signing_identity_is_reusable_workflow(self):
+        text = (ROOT / ".github/workflows/reusable-container.yml").read_text()
+        expected = "https://github.com/${{ github.repository }}/.github/workflows/reusable-container.yml@refs/heads/main"
+        self.assertIn(expected, text)
+        self.assertNotIn(".github/workflows/release.yml@refs/heads/main", text)
+
+    def test_reusable_workflow_has_no_elevated_permissions(self):
+        text = (ROOT / ".github/workflows/reusable-container.yml").read_text()
+        self.assertNotIn("packages: write", text)
+        self.assertNotIn("id-token: write", text)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -61,7 +61,7 @@ image digest using GitHub Actions OIDC and Sigstore keyless signing.
 The workflow then verifies the signature against:
 
 ```text
-https://github.com/<owner>/<repository>/.github/workflows/release.yml@refs/heads/main
+https://github.com/<owner>/<repository>/.github/workflows/reusable-container.yml@refs/heads/main
 ```
 
 and the Sigstore token issuer:
@@ -128,7 +128,7 @@ make inspect REGISTRY_IMAGE=ghcr.io/thenewthinktank/python
 and verify a known digest:
 
 ```bash
-export COSIGN_CERTIFICATE_IDENTITY='https://github.com/TheNewThinkTank/container-factory/.github/workflows/release.yml@refs/heads/main'
+export COSIGN_CERTIFICATE_IDENTITY='https://github.com/TheNewThinkTank/container-factory/.github/workflows/reusable-container.yml@refs/heads/main'
 make verify IMAGE=python DIGEST=sha256:<digest>
 ```
 

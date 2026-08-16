@@ -173,7 +173,7 @@ jobs:
       - name: Verify signature
         if: inputs.publish
         env:
-          COSIGN_CERTIFICATE_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/release.yml@refs/heads/main
+          COSIGN_CERTIFICATE_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/reusable-container.yml@refs/heads/main
           COSIGN_OIDC_ISSUER: https://token.actions.githubusercontent.com
           IMAGE: ${{ steps.tags.outputs.image }}
           DIGEST: ${{ steps.build.outputs.digest }}

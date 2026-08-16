@@ -1,3 +1,11 @@
+## 2.1.2
+
+- Fix release matrix filtering by removing the invalid job-level `matrix` expression.
+- Release now publishes all declared images when triggered, including manual dispatches.
+- Fix keyless Cosign verification to trust the reusable workflow that actually receives the OIDC identity.
+- Document the reusable workflow as the signing identity.
+- Keep CI and Release permissions separated at the caller boundary.
+
 # Changelog
 
 ## 2.1.1
