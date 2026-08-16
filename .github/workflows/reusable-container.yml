@@ -1,0 +1,201 @@
+name: Reusable container build
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: Image directory/name to build.
+        required: true
+        type: string
+      publish:
+        description: Push a multi-platform release to GHCR and sign it.
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build ${{ inputs.image }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Validate metadata
+        run: python3 scripts/validate-metadata.py "images/${{ inputs.image }}/metadata.yaml"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Set up security-policy Python
+        run: |
+          python3 -m venv .venv-security
+          .venv-security/bin/pip install -r requirements-dev.txt
+
+      - name: Log in to GHCR
+        if: inputs.publish
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read image metadata
+        id: image_metadata
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          import yaml
+
+          path = Path("images/${{ inputs.image }}/metadata.yaml")
+          data = yaml.safe_load(path.read_text(encoding="utf-8"))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+              f.write(f"name={data['name']}\n")
+              f.write(f"version={data['version']}\n")
+          PY
+
+      - name: Set release tags
+        if: inputs.publish
+        id: tags
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/${{ inputs.image }}
+          VERSION: ${{ steps.image_metadata.outputs.version }}
+        run: |
+          VERSION="${VERSION#v}"
+          MAJOR="${VERSION%%.*}"
+          REST="${VERSION#*.}"
+          MINOR="${REST%%.*}"
+          IMAGE="${IMAGE,,}"
+          {
+            echo "image=${IMAGE}"
+            echo "version=${VERSION}"
+            echo "major=${MAJOR}"
+            echo "minor=${MAJOR}.${MINOR}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Install Syft
+        uses: anchore/sbom-action/download-syft@v0
+
+      - name: Install Grype
+        id: grype
+        uses: anchore/scan-action/download-grype@v7
+
+      - name: Prepare Grype database
+        env:
+          GRYPE: ${{ steps.grype.outputs.cmd }}
+        run: scripts/prepare-grype.sh
+
+      - name: Build local CI image
+        if: ${{ !inputs.publish }}
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --tag "container-factory/${{ inputs.image }}:ci" \
+            --load \
+            "images/${{ inputs.image }}"
+
+      - name: Generate CI SBOM
+        if: ${{ !inputs.publish }}
+        run: |
+          mkdir -p sbom
+          syft \
+            "container-factory/${{ inputs.image }}:ci" \
+            -o cyclonedx-json="sbom/${{ inputs.image }}.cdx.json"
+
+      - name: Scan CI image
+        if: ${{ !inputs.publish }}
+        env:
+          SECURITY_PYTHON: .venv-security/bin/python
+          GRYPE: ${{ steps.grype.outputs.cmd }}
+          GRYPE_DB_MAX_ALLOWED_BUILT_AGE: "48h"
+        run: scripts/scan-image.sh "${{ inputs.image }}" ci
+
+      - name: Build, push and attest release image
+        if: inputs.publish
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: images/${{ inputs.image }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ steps.tags.outputs.image }}:${{ steps.tags.outputs.version }}
+            ${{ steps.tags.outputs.image }}:${{ steps.tags.outputs.major }}
+            ${{ steps.tags.outputs.image }}:${{ steps.tags.outputs.minor }}
+            ${{ steps.tags.outputs.image }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.tags.outputs.version }}
+          provenance: mode=max,version=v1
+          sbom: true
+
+      - name: Validate published image index
+        if: inputs.publish
+        env:
+          IMAGE: ${{ steps.tags.outputs.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: scripts/assert-image-index.sh "${IMAGE}@${DIGEST}"
+
+      - name: Show immutable image identity
+        if: inputs.publish
+        env:
+          IMAGE: ${{ steps.tags.outputs.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          echo "Image: ${IMAGE}"
+          echo "Digest: ${DIGEST}"
+          echo "Immutable reference: ${IMAGE}@${DIGEST}"
+
+      - name: Security gate on published digest
+        if: inputs.publish
+        env:
+          SECURITY_PYTHON: .venv-security/bin/python
+          GRYPE: ${{ steps.grype.outputs.cmd }}
+          GRYPE_DB_MAX_ALLOWED_BUILT_AGE: "48h"
+        run: |
+          scripts/scan-multiarch-image.sh \
+            "${{ steps.tags.outputs.image }}@${{ steps.build.outputs.digest }}"
+
+      - name: Install Cosign
+        if: inputs.publish
+        uses: sigstore/cosign-installer@v4.1.2
+
+      - name: Sign immutable image digest
+        if: inputs.publish
+        env:
+          IMAGE: ${{ steps.tags.outputs.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: scripts/sign-image.sh "${IMAGE}@${DIGEST}"
+
+      - name: Verify signature
+        if: inputs.publish
+        env:
+          COSIGN_CERTIFICATE_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/release.yml@refs/heads/main
+          COSIGN_OIDC_ISSUER: https://token.actions.githubusercontent.com
+          IMAGE: ${{ steps.tags.outputs.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: scripts/verify-image.sh "${IMAGE}@${DIGEST}"
+
+      - name: Verify SBOM and provenance attestations
+        if: inputs.publish
+        env:
+          IMAGE: ${{ steps.tags.outputs.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: scripts/verify-attestations.sh "${IMAGE}@${DIGEST}"
+
+      - name: Upload security reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: security-${{ inputs.image }}-${{ github.sha }}
+          path: |
+            sbom/
+            reports/
+          if-no-files-found: warn

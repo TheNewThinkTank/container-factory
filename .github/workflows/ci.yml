@@ -25,9 +25,7 @@ jobs:
               echo "========================================"
               echo "Validating: $image/metadata.yaml"
               echo "========================================"
-
-              python3 scripts/validate-metadata.py \
-                "$image/metadata.yaml"
+              python3 scripts/validate-metadata.py "$image/metadata.yaml"
             fi
           done
 
@@ -50,10 +48,7 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
-          .venv-security/bin/python \
-            -m unittest discover \
-            -s tests \
-            -v
+          .venv-security/bin/python -m unittest discover -s tests -v
 
       - name: Validate shell scripts
         run: |
@@ -62,73 +57,17 @@ jobs:
           done
 
   build-and-scan:
-    name: Build and scan images
+    name: Build and scan ${{ matrix.image }}
     needs: validate
-    runs-on: ubuntu-latest
-
     strategy:
       fail-fast: false
-
       matrix:
         image:
           - hello
           - python
-
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Set up security-policy Python
-        run: |
-          python3 -m venv .venv-security
-          .venv-security/bin/pip install -r requirements-dev.txt
-
-      - name: Build image
-        run: |
-          docker buildx build \
-            --platform linux/amd64 \
-            --tag "container-factory/${{ matrix.image }}:ci" \
-            --load \
-            "images/${{ matrix.image }}"
-
-      - name: Install Syft
-        uses: anchore/sbom-action/download-syft@v0
-
-      - name: Generate SBOM
-        run: |
-          mkdir -p sbom
-
-          syft \
-            "container-factory/${{ matrix.image }}:ci" \
-            -o cyclonedx-json="sbom/${{ matrix.image }}.cdx.json"
-
-      - name: Install Grype
-        id: grype
-        uses: anchore/scan-action/download-grype@v7
-
-      - name: Prepare Grype database
-        env:
-          GRYPE: ${{ steps.grype.outputs.cmd }}
-        run: scripts/prepare-grype.sh
-
-      - name: Scan image
-        env:
-          SECURITY_PYTHON: .venv-security/bin/python
-          GRYPE: ${{ steps.grype.outputs.cmd }}
-          GRYPE_DB_MAX_ALLOWED_BUILT_AGE: "48h"
-        run: |
-          scripts/scan-image.sh \
-            "${{ matrix.image }}" \
-            ci
-
-      - name: Upload security reports
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: security-${{ matrix.image }}-${{ github.sha }}
-          path: |
-            sbom/
-            reports/
-          if-no-files-found: warn
+    permissions:
+      contents: read
+    uses: ./.github/workflows/reusable-container.yml
+    with:
+      image: ${{ matrix.image }}
+      publish: false

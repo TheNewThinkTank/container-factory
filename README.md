@@ -57,7 +57,8 @@ container-factory/
 ├── .config/security-policy.yaml
 └── .github/workflows/
     ├── ci.yml
-    └── release.yml
+    ├── release.yml
+    └── reusable-container.yml
 ```
 
 ## Immutable image identity
@@ -77,7 +78,7 @@ scanning, signing, and verification.
 The release build uses:
 
 ```text
-provenance: mode=max
+provenance: mode=max,version=v1
 sbom: true
 ```
 
@@ -179,6 +180,14 @@ permissions:
 ```
 
 No Cosign private key or registry password is required.
+
+## CI and release workflows
+
+CI and Release intentionally remain separate entry points. CI answers “is this change safe to merge?” and builds/scans local `linux/amd64` images without publishing or signing. Release answers “is this exact artifact safe to distribute?” and performs the multi-platform build, attestations, digest-based security gate, signing, and verification.
+
+The implementation is shared through `.github/workflows/reusable-container.yml`, so build and security logic is defined once rather than duplicated between CI and Release. GitHub reusable workflows support typed `workflow_call` inputs and can be invoked from matrix jobs.
+
+CI is deliberately granted only `contents: read`. Release grants `packages: write` and `id-token: write` because it publishes to GHCR and performs keyless signing.
 
 ## v2 scope
 

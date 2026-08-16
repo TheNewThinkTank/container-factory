@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.1.0
+
+- Add a reusable container workflow as the single implementation of build and security-gate logic.
+- Keep CI and Release as separate entry points with different permissions and responsibilities.
+- CI builds/scans local linux/amd64 images without publishing or signing.
+- Release reuses the same build/security logic and additionally publishes, attests, signs, and verifies immutable digests.
+- Keep elevated GHCR and OIDC permissions scoped to the Release caller.
+
+
 ## 2.0.3
 
 - Fix multi-platform BuildKit provenance verification.

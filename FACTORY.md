@@ -70,6 +70,12 @@ https://token.actions.githubusercontent.com
 This means the trust decision is bound to the release workflow identity rather
 than a long-lived private signing key.
 
+## CI and release workflows
+
+CI and Release are separate workflow entry points with different trust levels. CI validates, tests, builds, and scans without publishing or signing. Release builds the multi-platform artifact, publishes it, performs the digest-based security gate, signs it, and verifies the resulting trust metadata.
+
+The implementation is shared by `.github/workflows/reusable-container.yml`. This prevents the build and scan logic from drifting between CI and Release while keeping the release workflow’s elevated `packages: write` and `id-token: write` permissions isolated to the release caller.
+
 ## Release flow
 
 ```text
