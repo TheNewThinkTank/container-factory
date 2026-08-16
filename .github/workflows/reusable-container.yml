@@ -84,37 +84,18 @@ jobs:
         run: |
           set -euo pipefail
           install_dir="$RUNNER_TEMP/syft"
-          archive_dir="$RUNNER_TEMP/syft-download"
-          archive="$archive_dir/syft_${SYFT_VERSION}_linux_amd64.tar.gz"
-          checksums="$archive_dir/syft_${SYFT_VERSION}_checksums.txt"
 
-          rm -rf "$install_dir" "$archive_dir"
-          mkdir -p "$install_dir" "$archive_dir"
+          rm -rf "$install_dir"
+          mkdir -p "$install_dir"
 
-          for attempt in 1 2 3 4 5; do
-            if curl -fL --retry 5 --retry-delay 2 \
-                --connect-timeout 20 --max-time 120 \
-                -o "$checksums" \
-                "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/syft_${SYFT_VERSION}_checksums.txt" \
-              && curl -fL --retry 5 --retry-delay 2 \
-                --connect-timeout 20 --max-time 120 \
-                -o "$archive" \
-                "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/syft_${SYFT_VERSION}_linux_amd64.tar.gz" \
-              && (cd "$archive_dir" && grep "  syft_${SYFT_VERSION}_linux_amd64.tar.gz$" "$checksums" | sha256sum -c -) \
-              && tar -xzf "$archive" -C "$install_dir"; then
-              break
-            fi
-            if [ "$attempt" -eq 5 ]; then
-              echo "ERROR: failed to download and verify Syft ${SYFT_VERSION}" >&2
-              exit 1
-            fi
-            rm -f "$checksums" "$archive"
-            sleep $((attempt * 5))
-          done
+          curl -sSfL --retry 5 --retry-delay 2 \
+            --connect-timeout 20 --max-time 120 \
+            https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+            | sh -s -- -b "$install_dir" -v "v${SYFT_VERSION}"
 
           test -x "$install_dir/syft"
           echo "$install_dir" >> "$GITHUB_PATH"
-          syft version
+          "$install_dir/syft" version
 
       - name: Install Grype
         id: grype

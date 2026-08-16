@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.2.5
+
+- Replace the custom Syft release-archive download logic with Anchore's official Syft installer.
+- Pin Syft to 1.50.0 and verify the downloaded artifact with Cosign.
+- Install Syft into an explicit runner-local directory and verify the executable before adding it to `GITHUB_PATH`.
+- Add regression coverage preventing a return to the custom release-download implementation.
+
 ## 2.2.3
 
 - Make the Node.js image a runtime-focused image by removing the bundled npm/npx toolchain.

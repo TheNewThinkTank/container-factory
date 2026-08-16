@@ -37,13 +37,18 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("rm -f /usr/local/bin/npm /usr/local/bin/npx", text)
         self.assertNotIn("npm install --global", text)
 
-    def test_syft_install_is_resilient_and_pinned(self):
+    def test_syft_install_uses_official_pinned_installer(self):
         text = (ROOT / ".github/workflows/reusable-container.yml").read_text()
         self.assertIn('SYFT_VERSION: "1.50.0"', text)
-        self.assertIn('https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}', text)
+        self.assertIn('https://raw.githubusercontent.com/anchore/syft/main/install.sh', text)
+        self.assertIn('sh -s -- -b "$install_dir" -v "v${SYFT_VERSION}"', text)
         self.assertIn("--retry 5", text)
         self.assertIn('sigstore/cosign-installer@v4.1.2', text)
+        self.assertIn('test -x "$install_dir/syft"', text)
+        self.assertIn('echo "$install_dir" >> "$GITHUB_PATH"', text)
         self.assertNotIn("anchore/sbom-action/download-syft@v0", text)
+        self.assertNotIn('syft/releases/download', text)
+        self.assertNotIn('syft-download', text)
 
     def test_go_uses_requested_trixie_image(self):
         text = (ROOT / "images/go/Dockerfile").read_text()
