@@ -132,7 +132,7 @@ jobs:
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ steps.tags.outputs.version }}
-          provenance: mode=max
+          provenance: mode=max,version=v1
           sbom: true
 
       - name: Validate published image index

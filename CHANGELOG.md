@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.2 — 2026-08-16
+
+### Fixed
+
+- Changed BuildKit provenance generation to explicit SLSA Provenance v1 (`mode=max,version=v1`).
+- Replaced incorrect `cosign verify-attestation` checks for BuildKit attestations with registry-level Buildx inspection of the published image.
+- Verify the published SBOM through `docker buildx imagetools inspect` and require SPDX data.
+- Verify the published provenance through Buildx and require the SLSA v1 `buildDefinition` and `runDetails` structure.
+- Kept Cosign signature verification separate from BuildKit attestation presence verification.
+
 ## 2.0.0 — 2026-08-14
 
 ### Added

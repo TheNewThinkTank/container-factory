@@ -192,3 +192,8 @@ v2 deliberately focuses on four supply-chain primitives:
 Admission control, policy engines, registry promotion, and consumer-side
 verification beyond signature identity are intentionally left for later
 versions.
+
+
+## Attestation model
+
+Release builds publish BuildKit SBOM and SLSA Provenance v1 attestations alongside the image index. The release gate inspects the published registry artifact with `docker buildx imagetools inspect` and requires SPDX SBOM data and the SLSA v1 `buildDefinition`/`runDetails` structure. Cosign signature verification is performed separately against the immutable image digest. BuildKit attestations and Cosign signatures are deliberately treated as different supply-chain artifacts.
