@@ -130,11 +130,24 @@ security:
     - low
     - negligible
     - unknown
-  exceptions: []
+  images:
+    python:
+      vulnerability_exceptions:
+        - id: CVE-2026-15308
+          reason: >
+            CVE affects CPython html.parser.HTMLParser.
+            The published runtime image does not itself process
+            attacker-controlled HTML. Downstream applications
+            remain responsible for assessing exposure.
+          expires: 2026-09-30
 ```
 
 The release scan is performed against the exact child manifests for the
 supported Linux architectures rather than against a separately rebuilt image.
+
+Vulnerability exceptions are scoped to an individual image and expire on a
+specific date. An exception suppresses only the matching CVE for that image;
+expired exceptions fail the policy gate.
 
 ## Local usage
 

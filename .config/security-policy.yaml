@@ -22,13 +22,15 @@ security:
     - negligible
     - unknown
 
-  # Explicit, time-limited exceptions.
+  # Explicit, time-limited exceptions scoped to a specific image.
   # Every exception requires a reason and expiry date.
-  exceptions: []
-
-  # Example:
-  #
-  # exceptions:
-  #   - id: CVE-2026-5450
-  #     reason: "Debian Trixie marks this vulnerability as won't fix."
-  #     expires: 2026-09-30
+  images:
+    python:
+      vulnerability_exceptions:
+        - id: CVE-2026-15308
+          reason: >
+            CVE affects CPython html.parser.HTMLParser.
+            The published runtime image does not itself process
+            attacker-controlled HTML. Downstream applications
+            remain responsible for assessing exposure.
+          expires: 2026-12-30

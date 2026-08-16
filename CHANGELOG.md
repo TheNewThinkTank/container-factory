@@ -8,6 +8,13 @@
 
 # Changelog
 
+## 2.1.3
+
+- Add image-scoped, time-limited vulnerability exceptions.
+- Pass image identity into security-policy evaluation so exceptions cannot leak between images.
+- Report active and expired exceptions explicitly.
+
+
 ## 2.1.1
 
 - Fix reusable workflow permissions: elevated `packages: write` and `id-token: write` are no longer declared by the called workflow.

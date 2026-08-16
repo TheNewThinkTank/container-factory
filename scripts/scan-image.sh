@@ -34,4 +34,4 @@ echo "Using Grype: ${GRYPE}"
 echo
 echo "Vulnerability report written to ${REPORT}"
 
-"${ROOT}/scripts/security-policy.sh" "${REPORT}"
+"${ROOT}/scripts/security-policy.sh" "${REPORT}" "${IMAGE}"

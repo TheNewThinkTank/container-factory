@@ -157,7 +157,8 @@ jobs:
           GRYPE_DB_MAX_ALLOWED_BUILT_AGE: "48h"
         run: |
           scripts/scan-multiarch-image.sh \
-            "${{ steps.tags.outputs.image }}@${{ steps.build.outputs.digest }}"
+            "${{ steps.tags.outputs.image }}@${{ steps.build.outputs.digest }}" \
+            "${{ inputs.image }}"
 
       - name: Install Cosign
         if: inputs.publish

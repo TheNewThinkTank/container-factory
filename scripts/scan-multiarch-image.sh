@@ -2,6 +2,7 @@
 set -euo pipefail
 
 IMAGE_REF="${1:-}"
+IMAGE_NAME="${2:-}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPORT_DIR="${REPORT_DIR:-${ROOT}/reports}"
@@ -9,7 +10,7 @@ GRYPE="${GRYPE:-grype}"
 SECURITY_PYTHON="${SECURITY_PYTHON:-python3}"
 
 if [[ -z "${IMAGE_REF}" ]]; then
-  echo "Usage: $0 <registry-image@digest>" >&2
+  echo "Usage: $0 <registry-image@digest> [image-name]" >&2
   exit 2
 fi
 
@@ -55,7 +56,7 @@ while IFS=$'\t' read -r os arch digest; do
     continue
   fi
 
-  if ! "${ROOT}/scripts/security-policy.sh" "${report}"; then
+  if ! "${ROOT}/scripts/security-policy.sh" "${report}" "${IMAGE_NAME}"; then
     failed=1
   fi
 done <<< "${MANIFESTS}"

@@ -36,7 +36,7 @@ class Policy:
     ignore_severity: frozenset[str]
     high_cvss_threshold: float
     no_fix_action: str
-    exceptions: dict[str, ExceptionRule]
+    image_exceptions: dict[str, dict[str, ExceptionRule]]
 
 
 def load_policy(path: Path) -> Policy:
@@ -60,26 +60,54 @@ def load_policy(path: Path) -> Policy:
     if no_fix_action not in {"review", "fail"}:
         raise ValueError("no_fix_action must be 'review' or 'fail'")
 
-    exceptions: dict[str, ExceptionRule] = {}
-    for item in security.get("exceptions", []):
-        if not isinstance(item, dict):
-            raise ValueError("each exception must be a mapping")
-        vuln_id = str(item.get("id", "")).strip()
-        reason = str(item.get("reason", "")).strip()
-        expires_text = str(item.get("expires", "")).strip()
-        if not vuln_id or not reason or not expires_text:
-            raise ValueError("exceptions require id, reason and expires")
-        expires = dt.date.fromisoformat(expires_text)
-        if vuln_id in exceptions:
-            raise ValueError(f"duplicate exception: {vuln_id}")
-        exceptions[vuln_id] = ExceptionRule(vuln_id, reason, expires)
+    image_exceptions: dict[str, dict[str, ExceptionRule]] = {}
+
+    # Exceptions are intentionally scoped to an image. This prevents an
+    # exception approved for one base image from silently weakening the
+    # security policy for every other image in the factory.
+    images = security.get("images", {}) or {}
+    if not isinstance(images, dict):
+        raise ValueError("security.images must be a mapping")
+
+    for image, image_config in images.items():
+        image_name = str(image).strip()
+        if not image_name:
+            raise ValueError("image names cannot be empty")
+        if not isinstance(image_config, dict):
+            raise ValueError(f"configuration for image '{image_name}' must be a mapping")
+
+        rules: dict[str, ExceptionRule] = {}
+        for item in image_config.get("vulnerability_exceptions", []) or []:
+            if not isinstance(item, dict):
+                raise ValueError(
+                    f"each vulnerability exception for image '{image_name}' must be a mapping"
+                )
+            vuln_id = str(item.get("id", "")).strip()
+            reason = str(item.get("reason", "")).strip()
+            expires_text = str(item.get("expires", "")).strip()
+            if not vuln_id or not reason or not expires_text:
+                raise ValueError(
+                    f"exceptions for image '{image_name}' require id, reason and expires"
+                )
+            try:
+                expires = dt.date.fromisoformat(expires_text)
+            except ValueError as exc:
+                raise ValueError(
+                    f"invalid expiry date for {vuln_id} on image '{image_name}': {expires_text}"
+                ) from exc
+            if vuln_id in rules:
+                raise ValueError(
+                    f"duplicate exception for image '{image_name}': {vuln_id}"
+                )
+            rules[vuln_id] = ExceptionRule(vuln_id, reason, expires)
+        image_exceptions[image_name] = rules
 
     return Policy(
         fail_severity=fail_severity,
         ignore_severity=ignore_severity,
         high_cvss_threshold=threshold,
         no_fix_action=no_fix_action,
-        exceptions=exceptions,
+        image_exceptions=image_exceptions,
     )
 
 
@@ -129,6 +157,7 @@ def evaluate(
     findings: list[Finding],
     policy: Policy,
     *,
+    image: str | None = None,
     today: dt.date | None = None,
 ) -> dict[str, Any]:
     today = today or dt.date.today()
@@ -143,7 +172,8 @@ def evaluate(
             ignored.append(finding)
             continue
 
-        rule = policy.exceptions.get(finding.vulnerability_id)
+        image_rules = policy.image_exceptions.get(image or "", {})
+        rule = image_rules.get(finding.vulnerability_id)
         if rule:
             if rule.expires >= today:
                 exceptions.append((finding, rule))
@@ -236,12 +266,16 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("report", type=Path)
     parser.add_argument("policy", type=Path)
+    parser.add_argument(
+        "--image",
+        help="Container-factory image name used to scope vulnerability exceptions.",
+    )
     args = parser.parse_args()
 
     report = json.loads(args.report.read_text(encoding="utf-8"))
     policy = load_policy(args.policy)
     findings = parse_findings(report)
-    result = evaluate(findings, policy)
+    result = evaluate(findings, policy, image=args.image)
     print_report(result, len(findings))
 
     return 1 if result["failures"] else 0
