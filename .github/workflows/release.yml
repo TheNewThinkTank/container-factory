@@ -29,7 +29,6 @@ permissions:
 
 jobs:
   release:
-    if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.image)
     name: Release ${{ matrix.image }}
     strategy:
       fail-fast: false
