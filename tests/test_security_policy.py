@@ -31,7 +31,7 @@ class SecurityPolicyTests(unittest.TestCase):
         values.update(kwargs)
         return Finding(**values)
 
-    def policy_with_exception(self, expires=dt.date(2026, 9, 30)):
+    def policy_with_exception(self, expires=dt.date(2026, 12, 30)):
         return Policy(
             **{
                 **self.policy.__dict__,
@@ -49,7 +49,7 @@ class SecurityPolicyTests(unittest.TestCase):
     def test_repository_policy_contains_python_exception(self):
         policy = load_policy(Path(".config/security-policy.yaml"))
         rule = policy.image_exceptions["python"]["CVE-2026-15308"]
-        self.assertEqual(rule.expires, dt.date(2026, 9, 30))
+        self.assertEqual(rule.expires, dt.date(2026, 12, 30))
         self.assertIn("html.parser.HTMLParser", rule.reason)
 
     def test_fixed_high_fails(self):
