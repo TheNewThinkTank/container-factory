@@ -80,22 +80,40 @@ jobs:
 
       - name: Install Syft
         env:
-          SYFT_VERSION: "1.44.0"
+          SYFT_VERSION: "1.50.0"
         run: |
           set -euo pipefail
+          install_dir="$RUNNER_TEMP/syft"
+          archive_dir="$RUNNER_TEMP/syft-download"
+          archive="$archive_dir/syft_${SYFT_VERSION}_linux_amd64.tar.gz"
+          checksums="$archive_dir/syft_${SYFT_VERSION}_checksums.txt"
+
+          rm -rf "$install_dir" "$archive_dir"
+          mkdir -p "$install_dir" "$archive_dir"
+
           for attempt in 1 2 3 4 5; do
-            if curl -fsSL --retry 5 --retry-delay 2 \
-                "https://get.anchore.io/syft" \
-                | sh -s -- -b "$RUNNER_TEMP/syft" -v "v${SYFT_VERSION}"; then
+            if curl -fL --retry 5 --retry-delay 2 \
+                --connect-timeout 20 --max-time 120 \
+                -o "$checksums" \
+                "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/syft_${SYFT_VERSION}_checksums.txt" \
+              && curl -fL --retry 5 --retry-delay 2 \
+                --connect-timeout 20 --max-time 120 \
+                -o "$archive" \
+                "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/syft_${SYFT_VERSION}_linux_amd64.tar.gz" \
+              && (cd "$archive_dir" && grep "  syft_${SYFT_VERSION}_linux_amd64.tar.gz$" "$checksums" | sha256sum -c -) \
+              && tar -xzf "$archive" -C "$install_dir"; then
               break
             fi
             if [ "$attempt" -eq 5 ]; then
-              echo "ERROR: failed to install Syft after ${attempt} attempts" >&2
+              echo "ERROR: failed to download and verify Syft ${SYFT_VERSION}" >&2
               exit 1
             fi
+            rm -f "$checksums" "$archive"
             sleep $((attempt * 5))
           done
-          echo "$RUNNER_TEMP/syft" >> "$GITHUB_PATH"
+
+          test -x "$install_dir/syft"
+          echo "$install_dir" >> "$GITHUB_PATH"
           syft version
 
       - name: Install Grype

@@ -39,10 +39,9 @@ class WorkflowSecurityTests(unittest.TestCase):
 
     def test_syft_install_is_resilient_and_pinned(self):
         text = (ROOT / ".github/workflows/reusable-container.yml").read_text()
-        self.assertIn('SYFT_VERSION: "1.44.0"', text)
-        self.assertIn('https://get.anchore.io/syft', text)
+        self.assertIn('SYFT_VERSION: "1.50.0"', text)
+        self.assertIn('https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}', text)
         self.assertIn("--retry 5", text)
-        self.assertIn('sh -s -- -b "$RUNNER_TEMP/syft" -v "v${SYFT_VERSION}"', text)
         self.assertIn('sigstore/cosign-installer@v4.1.2', text)
         self.assertNotIn("anchore/sbom-action/download-syft@v0", text)
 
