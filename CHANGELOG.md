@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.2.2
+
+- Update the Node.js image to install npm 12.0.1 on top of `node:26.7-trixie-slim`.
+- Use a pinned npm release rather than `latest` for reproducible builds.
+- Address the remaining Node.js image findings for `brace-expansion` and `ip-address` through the npm toolchain instead of security-policy exceptions.
+- Add a regression test for the pinned npm version.
+
 ## 2.2.1
 
 - Update Node.js image to `node:26.7-trixie-slim`.

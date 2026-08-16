@@ -31,6 +31,11 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("FROM node:26.7-trixie-slim", text)
         self.assertNotIn("bookworm", text.lower())
 
+    def test_node_pins_patched_npm_release(self):
+        text = (ROOT / "images/node/Dockerfile").read_text()
+        self.assertIn("npm install --global npm@12.0.1", text)
+        self.assertNotIn("npm install --global npm@latest", text)
+
     def test_go_uses_requested_trixie_image(self):
         text = (ROOT / "images/go/Dockerfile").read_text()
         self.assertIn("FROM golang:1.26.6-trixie", text)
