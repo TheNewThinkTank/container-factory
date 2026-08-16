@@ -75,8 +75,28 @@ jobs:
             echo "minor=${MAJOR}.${MINOR}"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v4.1.2
+
       - name: Install Syft
-        uses: anchore/sbom-action/download-syft@v0
+        env:
+          SYFT_VERSION: "1.44.0"
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            if curl -fsSL --retry 5 --retry-delay 2 \
+                "https://get.anchore.io/syft" \
+                | sh -s -- -b "$RUNNER_TEMP/syft" -v "v${SYFT_VERSION}"; then
+              break
+            fi
+            if [ "$attempt" -eq 5 ]; then
+              echo "ERROR: failed to install Syft after ${attempt} attempts" >&2
+              exit 1
+            fi
+            sleep $((attempt * 5))
+          done
+          echo "$RUNNER_TEMP/syft" >> "$GITHUB_PATH"
+          syft version
 
       - name: Install Grype
         id: grype
@@ -159,10 +179,6 @@ jobs:
           scripts/scan-multiarch-image.sh \
             "${{ steps.tags.outputs.image }}@${{ steps.build.outputs.digest }}" \
             "${{ inputs.image }}"
-
-      - name: Install Cosign
-        if: inputs.publish
-        uses: sigstore/cosign-installer@v4.1.2
 
       - name: Sign immutable image digest
         if: inputs.publish

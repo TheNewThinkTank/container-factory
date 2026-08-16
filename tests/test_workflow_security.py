@@ -31,10 +31,20 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn("FROM node:26.7-trixie-slim", text)
         self.assertNotIn("bookworm", text.lower())
 
-    def test_node_pins_patched_npm_release(self):
+    def test_node_runtime_omits_npm_toolchain(self):
         text = (ROOT / "images/node/Dockerfile").read_text()
-        self.assertIn("npm install --global npm@12.0.1", text)
-        self.assertNotIn("npm install --global npm@latest", text)
+        self.assertIn("rm -rf /usr/local/lib/node_modules/npm", text)
+        self.assertIn("rm -f /usr/local/bin/npm /usr/local/bin/npx", text)
+        self.assertNotIn("npm install --global", text)
+
+    def test_syft_install_is_resilient_and_pinned(self):
+        text = (ROOT / ".github/workflows/reusable-container.yml").read_text()
+        self.assertIn('SYFT_VERSION: "1.44.0"', text)
+        self.assertIn('https://get.anchore.io/syft', text)
+        self.assertIn("--retry 5", text)
+        self.assertIn('sh -s -- -b "$RUNNER_TEMP/syft" -v "v${SYFT_VERSION}"', text)
+        self.assertIn('sigstore/cosign-installer@v4.1.2', text)
+        self.assertNotIn("anchore/sbom-action/download-syft@v0", text)
 
     def test_go_uses_requested_trixie_image(self):
         text = (ROOT / "images/go/Dockerfile").read_text()

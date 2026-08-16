@@ -1,6 +1,6 @@
 name: node
 version: "26.7.0"
-description: Node.js 26.7 runtime based on Debian Trixie slim with npm 12.0.1.
+description: Node.js 26.7 runtime based on Debian Trixie slim; npm omitted from the runtime image.
 dockerfile: Dockerfile
 architectures:
   - linux/amd64

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.2.3
+
+- Make the Node.js image a runtime-focused image by removing the bundled npm/npx toolchain.
+- Avoid shipping npm's vulnerable transitive `brace-expansion` and `ip-address` dependencies in the Node.js runtime image.
+- Replace the flaky `anchore/sbom-action/download-syft` installer step with the official Syft installer, pinned to Syft 1.44.0 and protected by retries.
+- Add regression tests for the Node.js runtime boundary and resilient Syft installation.
+
 ## 2.2.2
 
 - Update the Node.js image to install npm 12.0.1 on top of `node:26.7-trixie-slim`.
