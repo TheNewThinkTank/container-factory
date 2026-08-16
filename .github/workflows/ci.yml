@@ -65,6 +65,11 @@ jobs:
         image:
           - hello
           - python
+          - node
+          - go
+          - nginx
+          - debian
+          - ubuntu
     permissions:
       contents: read
     uses: ./.github/workflows/reusable-container.yml

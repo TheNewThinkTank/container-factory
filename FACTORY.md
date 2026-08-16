@@ -20,7 +20,11 @@ registry:
 ```
 
 
-> **v2.1.1:** The reusable workflow intentionally declares no elevated `GITHUB_TOKEN` permissions. Callers grant only the permissions they need: CI is read-only; Release grants package publishing and OIDC signing.
+> **v2.2.0:** The reusable workflow intentionally declares no elevated `GITHUB_TOKEN` permissions. Callers grant only the permissions they need: CI is read-only; Release grants package publishing and OIDC signing.
+
+## Image catalog
+
+The factory currently defines seven images: `hello`, `python`, `node`, `go`, `nginx`, `debian`, and `ubuntu`. Each image follows the same metadata contract and is included in both CI and Release matrices.
 
 ## v2 artifact contract
 

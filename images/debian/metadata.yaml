@@ -1,0 +1,9 @@
+name: debian
+version: "13.0.0"
+description: Debian 13 (Trixie) slim base image with current security updates.
+dockerfile: Dockerfile
+architectures:
+  - linux/amd64
+  - linux/arm64
+registry:
+  - ghcr

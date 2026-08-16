@@ -1,0 +1,9 @@
+name: nginx
+version: "1.30.4"
+description: Nginx 1.30.4 web server based on Alpine Linux 3.24.
+dockerfile: Dockerfile
+architectures:
+  - linux/amd64
+  - linux/arm64
+registry:
+  - ghcr

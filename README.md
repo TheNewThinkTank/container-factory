@@ -7,7 +7,7 @@ A small, opinionated container-image factory for building, testing, scanning,
 attesting, signing, and publishing multi-architecture container images.
 
 
-> **v2.1.1:** The reusable workflow intentionally declares no elevated `GITHUB_TOKEN` permissions. Callers grant only the permissions they need: CI is read-only; Release grants package publishing and OIDC signing.
+> **v2.2.0:** The reusable workflow intentionally declares no elevated `GITHUB_TOKEN` permissions. Callers grant only the permissions they need: CI is read-only; Release grants package publishing and OIDC signing.
 
 ## v2 supply-chain model
 
@@ -63,6 +63,22 @@ container-factory/
     ├── release.yml
     └── reusable-container.yml
 ```
+
+## Image catalog
+
+The factory currently publishes seven reference images:
+
+| Image | Upstream base | Purpose |
+|---|---|---|
+| `hello` | Alpine 3.24 | Minimal smoke-test image |
+| `python` | Python 3.14.7 / Debian Trixie slim | Python runtime |
+| `node` | Node.js 24.18.0 / Debian Bookworm slim | JavaScript/TypeScript runtime |
+| `go` | Go 1.26.5 / Debian Bookworm | Go development runtime |
+| `nginx` | Nginx 1.30.4 / Alpine 3.24 | Web server running unprivileged on port 8080 |
+| `debian` | Debian Trixie slim | General-purpose Linux base |
+| `ubuntu` | Ubuntu 24.04 (metadata version 24.4.0) | General-purpose Linux base |
+
+The Node.js, Go, Nginx, Debian, and Ubuntu definitions are reference images for demonstrating the same factory controls across runtime and operating-system ecosystems.
 
 ## Immutable image identity
 

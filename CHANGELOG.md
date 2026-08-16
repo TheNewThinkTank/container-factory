@@ -1,4 +1,14 @@
-## 2.1.2
+# Changelog
+
+## 2.2.0
+
+- Add Node.js 24.18.0 runtime image.
+- Add Go 1.26.5 development image.
+- Add Nginx 1.30.4 Alpine image running as an unprivileged user on port 8080.
+- Add Debian 13 (Trixie) slim base image.
+- Add Ubuntu 24.04 LTS base image.
+- Extend CI and Release matrices to cover all seven factory images.
+
 
 - Fix release matrix filtering by removing the invalid job-level `matrix` expression.
 - Release now publishes all declared images when triggered, including manual dispatches.

@@ -1,0 +1,9 @@
+name: node
+version: "24.18.0"
+description: Node.js 24.18.0 runtime based on Debian Bookworm slim.
+dockerfile: Dockerfile
+architectures:
+  - linux/amd64
+  - linux/arm64
+registry:
+  - ghcr
