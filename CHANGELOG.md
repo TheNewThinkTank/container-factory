@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.2.1
+
+- Update Node.js image to `node:26.7-trixie-slim`.
+- Update Go image to `golang:1.26.6-trixie`.
+- Move Node.js and Go off Debian Bookworm onto Debian Trixie to avoid the EOL-distro scan warning and reduce stale vulnerability data.
+- Update image metadata and security-focused tests accordingly.
+
 ## 2.2.0
 
 - Add Node.js 24.18.0 runtime image.
@@ -17,6 +24,13 @@
 - Keep CI and Release permissions separated at the caller boundary.
 
 # Changelog
+
+## 2.2.1
+
+- Update Node.js image to `node:26.7-trixie-slim`.
+- Update Go image to `golang:1.26.6-trixie`.
+- Move Node.js and Go off Debian Bookworm onto Debian Trixie to avoid the EOL-distro scan warning and reduce stale vulnerability data.
+- Update image metadata and security-focused tests accordingly.
 
 ## 2.1.3
 

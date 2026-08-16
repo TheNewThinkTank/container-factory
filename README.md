@@ -72,8 +72,8 @@ The factory currently publishes seven reference images:
 |---|---|---|
 | `hello` | Alpine 3.24 | Minimal smoke-test image |
 | `python` | Python 3.14.7 / Debian Trixie slim | Python runtime |
-| `node` | Node.js 24.18.0 / Debian Bookworm slim | JavaScript/TypeScript runtime |
-| `go` | Go 1.26.5 / Debian Bookworm | Go development runtime |
+| `node` | Node.js 26.7 / Debian Trixie slim | JavaScript/TypeScript runtime |
+| `go` | Go 1.26.6 / Debian Trixie | Go development runtime |
 | `nginx` | Nginx 1.30.4 / Alpine 3.24 | Web server running unprivileged on port 8080 |
 | `debian` | Debian Trixie slim | General-purpose Linux base |
 | `ubuntu` | Ubuntu 24.04 (metadata version 24.4.0) | General-purpose Linux base |

@@ -1,6 +1,6 @@
 name: node
-version: "24.18.0"
-description: Node.js 24.18.0 runtime based on Debian Bookworm slim.
+version: "26.7.0"
+description: Node.js 26.7 runtime based on Debian Trixie slim.
 dockerfile: Dockerfile
 architectures:
   - linux/amd64

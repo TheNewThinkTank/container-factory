@@ -33,4 +33,4 @@ security:
             The published runtime image does not itself process
             attacker-controlled HTML. Downstream applications
             remain responsible for assessing exposure.
-          expires: 2026-12-30
+          expires: 2026-09-30

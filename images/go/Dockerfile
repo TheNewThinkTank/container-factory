@@ -1,8 +1,8 @@
-FROM golang:1.26.5-bookworm
+FROM golang:1.26.6-trixie
 
 LABEL \
     org.opencontainers.image.title="Go" \
-    org.opencontainers.image.description="Go 1.26.5 development runtime based on Debian Bookworm" \
+    org.opencontainers.image.description="Go 1.26.6 development runtime based on Debian Trixie" \
     org.opencontainers.image.source="https://github.com/TheNewThinkTank/container-factory"
 
 # Install the latest available Debian security updates.

@@ -1,6 +1,6 @@
 name: go
-version: "1.26.5"
-description: Go 1.26.5 development runtime based on Debian Bookworm.
+version: "1.26.6"
+description: Go 1.26.6 development runtime based on Debian Trixie.
 dockerfile: Dockerfile
 architectures:
   - linux/amd64

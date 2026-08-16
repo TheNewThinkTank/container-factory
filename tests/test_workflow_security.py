@@ -21,6 +21,21 @@ class WorkflowSecurityTests(unittest.TestCase):
         self.assertIn(expected, text)
         self.assertNotIn(".github/workflows/release.yml@refs/heads/main", text)
 
+    def test_release_matrix_contains_all_factory_images(self):
+        text = (ROOT / ".github/workflows/release.yml").read_text()
+        for image in ("hello", "python", "node", "go", "nginx", "debian", "ubuntu"):
+            self.assertIn(f"          - {image}", text)
+
+    def test_node_uses_requested_trixie_image(self):
+        text = (ROOT / "images/node/Dockerfile").read_text()
+        self.assertIn("FROM node:26.7-trixie-slim", text)
+        self.assertNotIn("bookworm", text.lower())
+
+    def test_go_uses_requested_trixie_image(self):
+        text = (ROOT / "images/go/Dockerfile").read_text()
+        self.assertIn("FROM golang:1.26.6-trixie", text)
+        self.assertNotIn("bookworm", text.lower())
+
     def test_reusable_workflow_has_no_elevated_permissions(self):
         text = (ROOT / ".github/workflows/reusable-container.yml").read_text()
         self.assertNotIn("packages: write", text)

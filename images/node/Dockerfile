@@ -1,8 +1,8 @@
-FROM node:24.18.0-bookworm-slim
+FROM node:26.7-trixie-slim
 
 LABEL \
     org.opencontainers.image.title="Node.js" \
-    org.opencontainers.image.description="Node.js 24.18.0 runtime based on Debian Bookworm slim" \
+    org.opencontainers.image.description="Node.js 26.7 runtime based on Debian Trixie slim" \
     org.opencontainers.image.source="https://github.com/TheNewThinkTank/container-factory"
 
 # Install the latest available Debian security updates.
