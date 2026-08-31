@@ -35,7 +35,7 @@ and attached to the final image.
 
 Cosign keyless signing binds an ephemeral signing key to the GitHub Actions
 OIDC identity and records the signing event in Sigstore's transparency log.
-citeturn0search1turn0search2
+
 
 ## Repository layout
 
@@ -43,17 +43,18 @@ OIDC identity and records the signing event in Sigstore's transparency log.
 container-factory/
 ├── images/
 ├── scripts/
+│   ├── assert-image-index.sh
 │   ├── build-image.sh
 │   ├── generate-sbom.sh
 │   ├── inspect-image-digest.sh
 │   ├── prepare-grype.sh
-│   ├── promote-image.sh
 │   ├── scan-image.sh
 │   ├── scan-multiarch-image.sh
 │   ├── security-policy.sh
 │   ├── setup-security-tools.sh
 │   ├── sign-image.sh
 │   ├── validate-metadata.py
+│   ├── verify-attestations.sh
 │   └── verify-image.sh
 ├── src/container_factory/
 ├── tests/
@@ -76,7 +77,7 @@ The factory currently publishes seven reference images:
 | `go` | Go 1.26.6 / Debian Trixie | Go development runtime |
 | `nginx` | Nginx 1.30.4 / Alpine 3.24 | Web server running unprivileged on port 8080 |
 | `debian` | Debian Trixie slim | General-purpose Linux base |
-| `ubuntu` | Ubuntu 24.04 (metadata version 24.4.0) | General-purpose Linux base |
+| `ubuntu` | Ubuntu 24.04 (metadata version 24.04.0) | General-purpose Linux base |
 
 The Node.js, Go, Nginx, Debian, and Ubuntu definitions are reference images for demonstrating the same factory controls across runtime and operating-system ecosystems.
 
@@ -127,7 +128,7 @@ make verify IMAGE=python DIGEST=sha256:<digest>
 ```
 
 Sigstore documents keyless container signing and verification with Cosign.
-citeturn0search1turn0search3
+
 
 ## Security policy
 

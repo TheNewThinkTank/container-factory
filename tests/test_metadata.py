@@ -1,3 +1,5 @@
+import importlib.util
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -5,6 +7,18 @@ from pathlib import Path
 import yaml
 
 from container_factory.metadata import load_metadata
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def _load_validate_metadata_module():
+    spec = importlib.util.spec_from_file_location(
+        "validate_metadata",
+        ROOT / "scripts" / "validate-metadata.py",
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 class MetadataTests(unittest.TestCase):
@@ -88,6 +102,35 @@ class MetadataTests(unittest.TestCase):
         path = self.write_image(metadata)
         with self.assertRaisesRegex(ValueError, "Unsupported registry"):
             load_metadata(path)
+
+    def test_unknown_field_is_rejected(self):
+        metadata = self.valid_metadata()
+        metadata["architektures"] = ["linux/amd64"]  # typo alongside valid field
+        path = self.write_image(metadata)
+        with self.assertRaisesRegex(ValueError, "Unknown field"):
+            load_metadata(path)
+
+
+class WriteGithubOutputsTests(unittest.TestCase):
+    def test_writes_name_and_version_to_github_output(self):
+        mod = _load_validate_metadata_module()
+        metadata = {"name": "myimage", "version": "1.2.3"}
+        with tempfile.NamedTemporaryFile(mode="r", suffix=".env", delete=False) as f:
+            output_path = f.name
+        try:
+            os.environ["GITHUB_OUTPUT"] = output_path
+            mod.write_github_outputs(metadata)
+            content = Path(output_path).read_text(encoding="utf-8")
+            self.assertIn("name=myimage\n", content)
+            self.assertIn("version=1.2.3\n", content)
+        finally:
+            del os.environ["GITHUB_OUTPUT"]
+            Path(output_path).unlink(missing_ok=True)
+
+    def test_skips_write_when_github_output_unset(self):
+        mod = _load_validate_metadata_module()
+        os.environ.pop("GITHUB_OUTPUT", None)
+        mod.write_github_outputs({"name": "x", "version": "0.0.1"})
 
 
 if __name__ == "__main__":

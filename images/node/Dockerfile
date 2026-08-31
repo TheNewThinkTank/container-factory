@@ -19,6 +19,7 @@ RUN rm -rf /usr/local/lib/node_modules/npm \
 WORKDIR /workspace
 
 # The official Node image provides the unprivileged `node` user.
+RUN chown node:node /workspace
 USER node
 
 CMD ["node", "--version"]

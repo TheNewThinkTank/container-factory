@@ -3,3 +3,33 @@ services:
     build:
       context: ./images/hello
     image: container-factory/hello:compose
+
+  python:
+    build:
+      context: ./images/python
+    image: container-factory/python:compose
+
+  node:
+    build:
+      context: ./images/node
+    image: container-factory/node:compose
+
+  go:
+    build:
+      context: ./images/go
+    image: container-factory/go:compose
+
+  nginx:
+    build:
+      context: ./images/nginx
+    image: container-factory/nginx:compose
+
+  debian:
+    build:
+      context: ./images/debian
+    image: container-factory/debian:compose
+
+  ubuntu:
+    build:
+      context: ./images/ubuntu
+    image: container-factory/ubuntu:compose

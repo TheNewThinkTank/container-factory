@@ -1,3 +1,7 @@
+# golang:trixie (without -slim) is intentional: this image ships the full Go
+# toolchain (compiler, stdlib, go tool) so users can compile and run Go code
+# inside the container. The larger footprint is the expected trade-off for a
+# development-runtime image.
 FROM golang:1.26.6-trixie
 
 LABEL \

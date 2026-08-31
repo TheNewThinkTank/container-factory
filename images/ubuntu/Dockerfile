@@ -21,4 +21,4 @@ RUN useradd \
 
 USER appuser
 
-CMD ["sh", "-c", "cat /etc/os-release"]
+CMD ["cat", "/etc/os-release"]

@@ -6,9 +6,8 @@ LABEL \
     org.opencontainers.image.source="https://github.com/TheNewThinkTank/container-factory"
 
 # Run Nginx without root privileges.
-RUN sed -i 's/listen       80;/listen       8080;/' /etc/nginx/conf.d/default.conf \
-    && sed -i 's/listen \[::\]:80;/listen [::]:8080;/' /etc/nginx/conf.d/default.conf \
-    && mkdir -p /var/cache/nginx /var/run/nginx \
+COPY default.conf /etc/nginx/conf.d/default.conf
+RUN mkdir -p /var/cache/nginx /var/run/nginx \
     && chown -R nginx:nginx /var/cache/nginx /var/run/nginx /etc/nginx/conf.d
 
 USER nginx

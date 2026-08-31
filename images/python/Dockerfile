@@ -21,7 +21,8 @@ RUN useradd \
         --create-home \
         --uid 10001 \
         --shell /usr/sbin/nologin \
-        appuser
+        appuser \
+    && chown appuser:appuser /workspace
 
 USER appuser
 

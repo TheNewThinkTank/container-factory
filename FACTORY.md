@@ -46,7 +46,7 @@ artifacts (including `sha256-<digest>`-style tags); those referrer digests are
 not treated as image identities by the factory.
 
 BuildKit supports these attestations directly during a registry push.
-citeturn0search8turn0search14
+
 
 ## Security gate
 

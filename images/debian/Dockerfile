@@ -21,4 +21,4 @@ RUN useradd \
 
 USER appuser
 
-CMD ["sh", "-c", "cat /etc/debian_version"]
+CMD ["cat", "/etc/debian_version"]

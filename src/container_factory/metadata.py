@@ -108,6 +108,11 @@ def load_metadata(path: Path) -> dict[str, Any]:
         values = ", ".join(sorted(unsupported_registries))
         raise ValueError(f"Unsupported registry/registries in {path}: {values}")
 
+    extra = set(metadata.keys()) - REQUIRED_FIELDS
+    if extra:
+        extra_text = ", ".join(sorted(extra))
+        raise ValueError(f"Unknown field(s) in {path}: {extra_text}")
+
     return {
         **metadata,
         "name": name,

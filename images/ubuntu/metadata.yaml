@@ -1,5 +1,5 @@
 name: ubuntu
-version: "24.4.0"
+version: "24.04.0"
 description: Ubuntu 24.04 LTS base image with current security updates.
 dockerfile: Dockerfile
 architectures:

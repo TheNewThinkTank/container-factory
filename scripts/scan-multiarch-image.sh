@@ -49,7 +49,7 @@ while IFS=$'\t' read -r os arch digest; do
   echo "Scanning ${platform} manifest ${digest}"
 
   child_ref="${IMAGE_REF%@*}@${digest}"
-  report="${REPORT_DIR}/registry-${arch}-grype.json"
+  report="${REPORT_DIR}/registry-${IMAGE_NAME:-unknown}-${arch}-grype.json"
   if ! "${GRYPE}" "${child_ref}" --output json --file "${report}"; then
     echo "ERROR: Grype failed for ${platform}" >&2
     failed=1
